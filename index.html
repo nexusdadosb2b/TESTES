@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Cartazes de Supermercado</title>
+    <!-- Tailwind CSS para Estilização da Interface -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS para ler arquivos Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Bibliotecas Oficiais para Geração Perfeita de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Fontes do Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;700;900&family=Oswald:wght@400;700&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --font-family: 'Inter', sans-serif;
+            --prod-color: #1f2937;
+            --price-color: #ef4444;
+            --bg-color: #ffffff;
+            --poster-bg: #ffffff;
+            
+            /* Variáveis da Posição Dinâmica da Logo */
+            --logo-x: 2%;
+            --logo-y: 2%;
+            --logo-w: 28%;
+        }
+
+        body {
+            background-color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Área de visualização na tela */
+        .preview-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        /* Página A4 Virtual - Flexbox fixo para a foto em PDF sair sem quebras brancas */
+        .a4-page {
+            background: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            
+            /* Mantém a quebra para a impressão nativa (botão verde) */
+            page-break-after: always;
+            break-after: page;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .a4-page:last-child {
+            page-break-after: auto;
+            break-after: auto;
+        }
+
+        /* Layouts baseados em % - Previnem o Bug da Grelha no html2canvas */
+        .layout-1 {
+            width: 210mm !important;
+            height: 297mm !important;
+        }
+        .layout-1 .poster { width: 100%; height: 100%; }
+
+        .layout-2 {
+            width: 297mm !important; 
+            height: 210mm !important;
+        }
+        .layout-2 .poster { width: 50%; height: 100%; border-right: 1px dashed #ccc; }
+
+        .layout-4 {
+            width: 210mm !important;
+            height: 297mm !important;
+        }
+        .layout-4 .poster { width: 50%; height: 50%; border-right: 1px dashed #ccc; border-bottom: 1px dashed #ccc; }
+
+        /* O Cartaz Individual */
+        .poster {
+            display: flex;
+            flex-direction: column;
+            background-color: var(--poster-bg);
+            box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* TRAVA ABSOLUTA: Imagens e Blocos de Tema Automático */
+        .poster-header, .poster-footer, .poster-header-auto, .poster-footer-auto {
+            position: absolute; 
+            left: 0;
+            width: 100%;
+            height: 20% !important; 
+            object-fit: cover;
+            z-index: 10;
+            box-sizing: border-box;
+        }
+
+        .poster-header, .poster-header-auto { top: 0; }
+        .poster-footer, .poster-footer-auto { bottom: 0; }
+
+        .poster-header-auto, .poster-footer-auto {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+            font-weight: 900;
+            text-align: center;
+            padding: 0 5%;
+            font-family: var(--font-family);
+        }
+
+        /* LOGO ARRASTÁVEL E REDIMENSIONÁVEL */
+        .logo-container {
+            position: absolute;
+            top: var(--logo-y);
+            left: var(--logo-x);
+            width: var(--logo-w);
+            z-index: 40; 
+            cursor: grab;
+            border: 2px dashed transparent;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .logo-container:hover { border-color: rgba(59, 130, 246, 0.5); }
+        .logo-container:active { cursor: grabbing; border-color: rgba(59, 130, 246, 1); }
+
+        .poster-logo {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            pointer-events: none; 
+            display: block;
+        }
+
+        .resize-handle {
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            width: 16px;
+            height: 16px;
+            background-color: #3b82f6;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: se-resize;
+            display: none;
+            z-index: 50;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .logo-container:hover .resize-handle, 
+        .logo-container:active .resize-handle {
+            display: block;
+        }
+
+        /* Corpo central com texto */
+        .poster-body {
+            position: absolute;
+            top: 20%; 
+            left: 0;
+            width: 100%;
+            height: 60% !important; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5%;
+            text-align: center;
+            font-family: var(--font-family);
+            box-sizing: border-box;
+            overflow: visible; 
+            z-index: 5;
+        }
+
+        /* FORÇANDO A FONTE GROSSA PARA O PRODUTO E PREÇO */
+        .product-name {
+            color: var(--prod-color);
+            font-weight: 900;
+            line-height: 1.1;
+            text-transform: uppercase;
+            text-align: center;
+            width: 100%;
+            word-wrap: break-word;
+        }
+
+        .product-price {
+            color: var(--price-color);
+            font-weight: 900;
+            line-height: 1;
+            margin-top: 10px;
+            text-align: center;
+            width: 100%;
+            /* FLEX FOI REMOVIDO DAQUI PARA NÃO QUEBRAR O ALINHAMENTO DO R$ NO PDF */
+        }
+
+        /* Interação de Edição Individual (Arrastar e Redimensionar Textos) */
+        .editable-element {
+            position: relative;
+            cursor: grab;
+            border: 2px dashed transparent;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+            z-index: 20;
+        }
+
+        .editable-element:hover { border-color: rgba(59, 130, 246, 0.4); }
+        .editable-element:active { cursor: grabbing; border-color: rgba(59, 130, 246, 0.8); }
+        .editable-element:hover .element-resize-handle,
+        .editable-element:active .element-resize-handle { display: block; }
+        
+        .element-resize-handle {
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            width: 16px;
+            height: 16px;
+            background-color: #10b981; /* Verde para diferenciar da logo */
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: se-resize;
+            display: none;
+            z-index: 50;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        /* CSS NATIVO DE IMPRESSÃO (Botão Verde) */
+        @media print {
+            .no-print { display: none !important; }
+            .no-print-bg { background: none !important; }
+            
+            .logo-container { border: none !important; }
+            .resize-handle { display: none !important; }
+            .editable-element { border: none !important; }
+            .element-resize-handle { display: none !important; }
+
+            body, html {
+                height: 100% !important; 
+                min-height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: white !important;
+                overflow: hidden !important; 
+            }
+
+            main {
+                height: 100% !important;
+                overflow: visible !important;
+                position: static !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .preview-container {
+                padding: 0 !important;
+                margin: 0 !important;
+                gap: 0;
+                display: block; 
+                overflow: visible !important;
+            }
+
+            .a4-page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                border: none !important;
+            }
+
+            #toastContainer { display: none !important; }
+
+            @page { margin: 0; }
+        }
+
+        /* A SOLUÇÃO DEFINITIVA PARA O PDF: O "DOM Morphing" */
+        .pdf-exporting {
+            overflow: visible !important;
+            height: auto !important;
+        }
+        .pdf-exporting body {
+            overflow: visible !important;
+            height: auto !important;
+            background-color: #ffffff !important;
+        }
+        .pdf-exporting aside {
+            display: none !important;
+        }
+        .pdf-exporting main {
+            overflow: visible !important;
+            height: auto !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            background: transparent !important;
+        }
+        .pdf-exporting .preview-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            gap: 20px !important;
+            align-items: flex-start !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        .pdf-exporting .a4-page {
+            margin: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            page-break-after: auto !important;
+            break-after: auto !important;
+        }
+        .pdf-exporting .no-print-bg { background: none !important; }
+        .pdf-exporting .no-print { display: none !important; }
+        .pdf-exporting .logo-container { border: none !important; }
+        .pdf-exporting .resize-handle { display: none !important; }
+        .pdf-exporting .editable-element { border: none !important; }
+        .pdf-exporting .element-resize-handle { display: none !important; }
+    </style>
+    <style id="dynamicPrintStyle">
+        @page { size: A4 portrait; margin: 0; }
+    </style>
+</head>
+<body class="h-screen flex flex-col md:flex-row overflow-hidden relative">
+
+    <div id="loginOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-[100]">
+        <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md border-t-4 border-blue-600">
+            <h2 class="text-2xl font-black text-center text-gray-800 mb-2">PromoPrint Maker</h2>
+            <p class="text-center text-gray-500 text-sm mb-6">Acesse para gerenciar seus cartazes</p>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700">E-mail de Acesso</label>
+                    <input type="email" id="loginEmail" placeholder="loja@exemplo.com" required class="mt-1 w-full p-3 border border-gray-300 rounded bg-gray-50 focus:bg-white focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700">Senha</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required class="mt-1 w-full p-3 border border-gray-300 rounded bg-gray-50 focus:bg-white focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                </div>
+                <button type="submit" id="loginBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 shadow-md transition transform active:scale-95">Entrar no Sistema</button>
+            </form>
+            <p id="loginError" class="text-red-600 text-sm font-bold text-center mt-4 hidden bg-red-50 p-2 rounded"></p>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÕES TOAST -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
+
+    <aside class="no-print w-full md:w-[420px] bg-white shadow-xl h-full flex flex-col overflow-y-auto z-10 border-r border-gray-200">
+        <div class="p-6 bg-blue-700 text-white shrink-0 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                    PromoPrint
+                </h1>
+                <p class="text-blue-200 text-xs mt-1">SISTEMA GERADOR DE CARTAZES</p>
+            </div>
+            <button id="logoutBtn" class="text-xs bg-blue-800 hover:bg-blue-900 px-3 py-2 rounded font-bold shadow transition hidden">Sair</button>
+        </div>
+
+        <div class="p-6 flex flex-col gap-6 flex-grow">
+            <!-- SEÇÃO 1: VISUAL DO CARTAZ -->
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold text-gray-800 border-b pb-2">1. Visual do Cartaz</h2>
+                
+                <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-md border border-gray-200 shadow-sm">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Logo da Loja</label>
+                        <input type="file" id="logoUpload" accept="image/*" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer">
+                        <button id="clearLogoBtn" class="text-[10px] font-bold text-red-500 hover:text-red-700 mt-1 hidden underline">Remover Logo</button>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Fundo da Folha (Papel)</label>
+                        <input type="color" id="posterBgColor" value="#ffffff" class="h-8 w-full rounded border border-gray-300 cursor-pointer">
+                    </div>
+                </div>
+
+                <div class="flex rounded-md shadow-sm" role="group">
+                    <button type="button" id="tabImgBtn" class="flex-1 px-4 py-2 text-sm font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-l-lg hover:bg-blue-100 transition">
+                        Sua Arte (Imagem)
+                    </button>
+                    <button type="button" id="tabAutoBtn" class="flex-1 px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-50 transition">
+                        Tema Automático
+                    </button>
+                </div>
+
+                <div id="panelImage" class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cabeçalho (Topo)</label>
+                        <input type="file" id="headerUpload" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Rodapé (Base)</label>
+                        <input type="file" id="footerUpload" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
+                    </div>
+                </div>
+
+                <div id="panelAuto" class="space-y-4 hidden bg-yellow-50 p-4 border border-yellow-200 rounded-lg shadow-inner">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 mb-2 uppercase">Cores Prontas</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="preset-btn text-xs py-1.5 rounded font-bold bg-red-600 text-white hover:bg-red-700 shadow" data-bg="#ef4444" data-text="#fef08a" data-foot="#dc2626">Padrão Promo</button>
+                            <button class="preset-btn text-xs py-1.5 rounded font-bold bg-green-600 text-white hover:bg-green-700 shadow" data-bg="#16a34a" data-text="#ffffff" data-foot="#15803d">Hortifruti</button>
+                            <button class="preset-btn text-xs py-1.5 rounded font-bold bg-gray-900 text-yellow-400 border border-gray-700 hover:bg-gray-800 shadow" data-bg="#111827" data-text="#fbbf24" data-foot="#000000">Carnes/FDS</button>
+                            <button class="preset-btn text-xs py-1.5 rounded font-bold bg-black text-white border border-gray-700 hover:bg-gray-900 shadow" data-bg="#000000" data-text="#ffffff" data-foot="#111111">Black Friday</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-600 mb-1">Fundo Topo</label>
+                            <input type="color" id="autoHeaderBg" value="#ef4444" class="h-8 w-full rounded border border-gray-300 cursor-pointer shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-600 mb-1">Cor da Letra</label>
+                            <input type="color" id="autoTextColor" value="#fef08a" class="h-8 w-full rounded border border-gray-300 cursor-pointer shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-600 mb-1">Fundo Rodapé</label>
+                            <input type="color" id="autoFooterBg" value="#dc2626" class="h-8 w-full rounded border border-gray-300 cursor-pointer shadow-sm">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">
+                                Aumentar Topo <span id="autoTitleSizeDisplay" class="text-blue-600">100%</span>
+                            </label>
+                            <input type="range" id="autoTitleScale" min="50" max="250" value="100" class="w-full h-2 bg-yellow-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">
+                                Aumentar Rodapé <span id="autoSubSizeDisplay" class="text-blue-600">100%</span>
+                            </label>
+                            <input type="range" id="autoSubScale" min="50" max="250" value="100" class="w-full h-2 bg-yellow-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Frase Principal (Topo)</label>
+                        <input type="text" id="autoThemeText" value="OFERTA IMPERDÍVEL" class="w-full text-sm border-gray-300 rounded border p-2 outline-none uppercase font-bold focus:ring-yellow-500 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Frase Rodapé (Validade)</label>
+                        <input type="text" id="autoThemeSecondaryText" value="APROVEITE NOSSAS PROMOÇÕES" class="w-full text-sm border-gray-300 rounded border p-2 outline-none uppercase font-bold focus:ring-yellow-500 shadow-sm">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 2: PRODUTOS (COM MENU DE CLUBE E DE/POR) -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-end border-b pb-2">
+                    <h2 class="text-lg font-bold text-gray-800">2. Produtos</h2>
+                    <button id="clearProductsBtn" data-confirm="false" class="text-xs text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer bg-blue-50 px-2 py-1 rounded transition-colors duration-200">Limpar Produtos</button>
+                </div>
+
+                <div class="bg-blue-50 p-3 rounded-md border border-blue-200 shadow-sm">
+                    <label class="block text-sm font-bold text-blue-800 mb-1">Tipo de Promoção</label>
+                    <select id="promoType" class="w-full text-sm border-blue-300 rounded border p-2 focus:ring-blue-500 outline-none cursor-pointer font-semibold text-blue-900">
+                        <option value="normal">Promoção Normal (1 Preço)</option>
+                        <option value="club">Clube de Vantagens (2 Preços)</option>
+                        <option value="from_to">De / Por (2 Preços)</option>
+                    </select>
+                </div>
+                
+                <div class="bg-white p-3 rounded-md border border-gray-200 shadow-sm">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Digitar Manualmente</label>
+                    <div class="space-y-2">
+                        <input type="text" id="manualProdName" placeholder="Ex: ARROZ TIPO 1 5KG" class="w-full text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none uppercase">
+                        <div class="flex gap-2">
+                            <input type="text" id="manualProdPrice" placeholder="Ex: 24,90" class="w-full text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none">
+                            <input type="text" id="manualProdPriceRegular" placeholder="Ex: Normal 29,90" class="w-full text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none hidden">
+                        </div>
+                        <button id="addManualBtn" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold rounded py-2 text-sm shadow">Adicionar Produto</button>
+                    </div>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="flex-shrink-0 mx-4 text-gray-400 text-xs font-bold uppercase">OU IMPORTAR EXCEL</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
+
+                <div class="bg-green-50 p-3 rounded-md border border-green-200 shadow-sm">
+                    <label class="block text-sm font-bold text-green-800 mb-1">Importar Planilha (.xlsx, .csv)</label>
+                    <div class="text-[10px] text-green-700 mb-2 bg-green-100 p-1.5 rounded" id="excelInstructions">
+                        Colunas obrigatórias: <b>1ª Produto</b> | <b>2ª Preço</b>
+                    </div>
+                    <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-green-700 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-green-600 file:text-white hover:file:bg-green-700 cursor-pointer">
+                </div>
+            </div>
+
+            <!-- SEÇÃO 3: ESTILO -->
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold text-gray-800 border-b pb-2">3. Estilo e Textos</h2>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Fonte Principal</label>
+                    <select id="fontFamily" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md border shadow-sm cursor-pointer font-bold">
+                        <option value="'Inter', sans-serif">Inter (Padrão e Limpa)</option>
+                        <option value="'Anton', sans-serif">Anton (Impacto / Grossa)</option>
+                        <option value="'Oswald', sans-serif">Oswald (Condensada / Alta)</option>
+                        <option value="'Roboto', sans-serif">Roboto (Clássica)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-md border border-gray-200">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 mb-1">Cor do Produto</label>
+                        <input type="color" id="prodColor" value="#1f2937" class="h-8 w-full rounded border border-gray-300 cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 mb-1">Cor do Preço</label>
+                        <input type="color" id="priceColor" value="#ef4444" class="h-8 w-full rounded border border-gray-300 cursor-pointer">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1 flex justify-between">
+                            Tamanho Produto <span id="prodFontSizeDisplay" class="text-blue-600">100%</span>
+                        </label>
+                        <input type="range" id="prodFontSizeScale" min="50" max="200" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1 flex justify-between">
+                            Tamanho Preço <span id="priceFontSizeDisplay" class="text-blue-600">100%</span>
+                        </label>
+                        <input type="range" id="priceFontSizeScale" min="50" max="250" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- PAINEL OCULTO: AJUSTES DO PREÇO ANTERIOR -->
+                <div id="promoSettingsPanel" class="hidden space-y-3 mt-4 border-t pt-3 border-gray-200">
+                    <h3 class="text-sm font-bold text-gray-700">Ajustes do Preço Anterior / Normal</h3>
+                    <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-md border border-gray-200">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1">Cor Preço Anterior</label>
+                            <input type="color" id="priceRegColor" value="#6b7280" class="h-8 w-full rounded border border-gray-300 cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">
+                                Tamanho Anterior <span id="priceRegFontSizeDisplay" class="text-blue-600">100%</span>
+                            </label>
+                            <input type="range" id="priceRegFontSizeScale" min="50" max="250" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1">Texto Acima Anterior</label>
+                            <input type="text" id="textPromoTop" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold text-center">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1">Texto Acima Principal</label>
+                            <input type="text" id="textPromoBottom" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold text-center">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 4: SAÍDA -->
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold text-gray-800 border-b pb-2">4. Saída e Layout</h2>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Cartazes por Folha A4</label>
+                    <div class="grid grid-cols-3 gap-2 mt-2">
+                        <button class="layout-btn border-2 border-blue-600 bg-blue-50 text-blue-700 rounded py-2 font-black text-lg" data-layout="1">1</button>
+                        <button class="layout-btn border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 rounded py-2 font-black text-lg" data-layout="2">2</button>
+                        <button class="layout-btn border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 rounded py-2 font-black text-lg" data-layout="4">4</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 5: NUVEM E PROJETOS -->
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold text-gray-800 border-b pb-2 flex items-center justify-between">
+                    <span>5. Projetos Salvos</span>
+                    <span id="cloudStatus" class="text-[10px] font-bold bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full border border-yellow-200">Aguardando login...</span>
+                </h2>
+
+                <button id="newProjectBtn" data-confirm="false" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black py-3 px-4 rounded-lg border border-indigo-200 shadow-sm transition-all duration-200 transform active:scale-95 flex justify-center items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    <span>CRIAR NOVO PROJETO (Limpar Tudo)</span>
+                </button>
+                
+                <div class="pt-2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Salvar Campanha Atual</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="projectName" placeholder="Ex: Ofertas de Fim de Mês" class="flex-grow pl-3 pr-3 py-2 text-sm border-gray-300 rounded-md border shadow-inner">
+                        <button id="saveProjectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold shadow-md disabled:opacity-50">Salvar</button>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Histórico da Loja</label>
+                    <ul id="savedProjectsList" class="bg-white border border-gray-200 rounded-md max-h-40 overflow-y-auto divide-y divide-gray-100 text-sm shadow-inner">
+                        <li class="p-3 text-gray-500 text-center italic text-xs">Carregando seus projetos...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t bg-white sticky bottom-0 shrink-0 z-20 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)]">
+            <div class="flex flex-col gap-2">
+                <button id="pdfBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-sm py-3 px-4 rounded-lg shadow transition-transform transform active:scale-95 flex justify-center items-center gap-2 border border-blue-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    BAIXAR PDF (Recomendado)
+                </button>
+                
+                <button id="printBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm py-2 px-4 rounded-lg shadow transition-transform transform active:scale-95 flex justify-center items-center gap-2 border border-green-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    Imprimir Direto
+                </button>
+            </div>
+            <p class="text-[9px] font-medium text-center text-gray-500 mt-2 leading-tight">O botão azul gera um arquivo sem problemas de margem. O verde usa o navegador (requer configuração manual).</p>
+        </div>
+    </aside>
+
+    <main class="flex-grow bg-gray-300 overflow-y-auto relative no-print-bg">
+        <div class="absolute inset-0 no-print pointer-events-none opacity-5" style="background-image: radial-gradient(#000 1px, transparent 1px); background-size: 20px 20px;"></div>
+        
+        <div class="p-4 flex justify-between items-center bg-white shadow-sm no-print sticky top-0 z-10 border-b border-gray-200">
+            <h2 class="font-bold text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                Pré-visualização
+            </h2>
+            <div class="text-sm bg-blue-100 text-blue-800 px-4 py-1 rounded-full font-bold border border-blue-200 shadow-sm" id="pageCountDisplay">
+                Páginas: 0
+            </div>
+        </div>
+
+        <div id="previewContainer" class="preview-container pb-20"></div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // CHAVES ORIGINAIS PRESERVADAS
+        const firebaseConfig = {
+            apiKey: "AIzaSyDB81varVquhypzkLfbf6bf2RiNX4fcPL4",
+            authDomain: "promoprint-maker.firebaseapp.com",
+            projectId: "promoprint-maker",
+            storageBucket: "promoprint-maker.firebasestorage.app",
+            messagingSenderId: "218054208443",
+            appId: "1:218054208443:web:5e1098858d03609e8bf29e"
+        };
+
+        const appId = 'poster-maker-app';
+        let app, auth, db;
+        let currentUser = null;
+        let currentSessionId = null;
+        
+        let currentProjectId = null; 
+        let loadedProjectName = ""; 
+        
+        let unsubscribeProjects = null;
+        let sessionUnsubscribe = null;
+
+        try { app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app); } catch (e) { console.warn("Erro no Firebase", e); }
+
+        const state = {
+            headerImg: null, footerImg: null, logoImg: null, products: [], 
+            settings: {
+                themeMode: 'image', posterBgColor: "#ffffff",
+                autoThemeHeaderBg: "#ef4444", autoThemeFooterBg: "#dc2626", autoThemeTextColor: "#fef08a",
+                autoThemeText: "OFERTA IMPERDÍVEL", autoThemeSecondaryText: "APROVEITE NOSSAS PROMOÇÕES",
+                autoTitleScale: 100, autoSubScale: 100, fontFamily: "'Inter', sans-serif",
+                prodColor: "#1f2937", priceColor: "#ef4444", prodFontScale: 100, priceFontScale: 100, layout: 1,
+                logoX: 2, logoY: 2, logoW: 28,
+                // CONFIGURAÇÕES DO PREÇO DUPLO
+                promoType: 'normal',
+                priceRegColor: "#6b7280", priceRegFontScale: 100,
+                textPromoDe: "DE R$", textPromoPor: "POR",
+                textClubNormal: "PREÇO NORMAL R$", textClubPromo: "CLIENTE CLUBE"
+            }
+        };
+
+        const els = {
+            loginOverlay: document.getElementById('loginOverlay'), loginForm: document.getElementById('loginForm'),
+            loginEmail: document.getElementById('loginEmail'), loginPassword: document.getElementById('loginPassword'),
+            loginBtn: document.getElementById('loginBtn'), loginError: document.getElementById('loginError'), logoutBtn: document.getElementById('logoutBtn'),
+            headerUpload: document.getElementById('headerUpload'), footerUpload: document.getElementById('footerUpload'),
+            logoUpload: document.getElementById('logoUpload'), clearLogoBtn: document.getElementById('clearLogoBtn'),
+            posterBgColor: document.getElementById('posterBgColor'), tabImgBtn: document.getElementById('tabImgBtn'),
+            tabAutoBtn: document.getElementById('tabAutoBtn'), panelImage: document.getElementById('panelImage'),
+            panelAuto: document.getElementById('panelAuto'), presetBtns: document.querySelectorAll('.preset-btn'),
+            autoHeaderBg: document.getElementById('autoHeaderBg'), autoTextColor: document.getElementById('autoTextColor'),
+            autoFooterBg: document.getElementById('autoFooterBg'), autoThemeText: document.getElementById('autoThemeText'),
+            autoThemeSecondaryText: document.getElementById('autoThemeSecondaryText'), autoTitleScale: document.getElementById('autoTitleScale'),
+            autoSubScale: document.getElementById('autoSubScale'), autoTitleSizeDisplay: document.getElementById('autoTitleSizeDisplay'),
+            autoSubSizeDisplay: document.getElementById('autoSubSizeDisplay'), excelUpload: document.getElementById('excelUpload'),
+            fontFamily: document.getElementById('fontFamily'), prodColor: document.getElementById('prodColor'),
+            priceColor: document.getElementById('priceColor'), prodFontSizeScale: document.getElementById('prodFontSizeScale'),
+            priceFontSizeScale: document.getElementById('priceFontSizeScale'), prodFontSizeDisplay: document.getElementById('prodFontSizeDisplay'),
+            priceFontSizeDisplay: document.getElementById('priceFontSizeDisplay'), layoutBtns: document.querySelectorAll('.layout-btn'),
+            printBtn: document.getElementById('printBtn'), pdfBtn: document.getElementById('pdfBtn'), 
+            previewContainer: document.getElementById('previewContainer'), pageCountDisplay: document.getElementById('pageCountDisplay'),
+            dynamicPrintStyle: document.getElementById('dynamicPrintStyle'), toastContainer: document.getElementById('toastContainer'),
+            projectName: document.getElementById('projectName'), saveProjectBtn: document.getElementById('saveProjectBtn'),
+            savedProjectsList: document.getElementById('savedProjectsList'), cloudStatus: document.getElementById('cloudStatus'),
+            manualProdName: document.getElementById('manualProdName'), manualProdPrice: document.getElementById('manualProdPrice'),
+            addManualBtn: document.getElementById('addManualBtn'), clearProductsBtn: document.getElementById('clearProductsBtn'),
+            newProjectBtn: document.getElementById('newProjectBtn'),
+            // NOVOS ELEMENTOS
+            promoType: document.getElementById('promoType'),
+            manualProdPriceRegular: document.getElementById('manualProdPriceRegular'),
+            excelInstructions: document.getElementById('excelInstructions'),
+            promoSettingsPanel: document.getElementById('promoSettingsPanel'),
+            priceRegColor: document.getElementById('priceRegColor'),
+            priceRegFontSizeScale: document.getElementById('priceRegFontSizeScale'),
+            priceRegFontSizeDisplay: document.getElementById('priceRegFontSizeDisplay'),
+            textPromoTop: document.getElementById('textPromoTop'),
+            textPromoBottom: document.getElementById('textPromoBottom')
+        };
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgColors = { 'success': 'bg-green-600', 'error': 'bg-red-600', 'info': 'bg-blue-600' };
+            toast.className = `${bgColors[type]} text-white px-4 py-3 rounded shadow-lg transition-opacity duration-300 ease-in-out opacity-0 flex items-center justify-between min-w-[250px] font-bold text-sm z-50`;
+            toast.innerHTML = `<span>${message}</span>`;
+            els.toastContainer.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('opacity-0'));
+            setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        if (auth) {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUser = user; 
+                    els.loginOverlay.classList.add('hidden'); 
+                    els.logoutBtn.classList.remove('hidden');
+                    els.cloudStatus.textContent = 'Nuvem Conectada'; 
+                    els.cloudStatus.className = 'text-[10px] font-bold bg-green-100 text-green-800 px-2 py-1 rounded-full border border-green-200';
+                    
+                    currentSessionId = crypto.randomUUID(); 
+                    const sessionRef = doc(db, 'sessions', user.uid);
+                    await setDoc(sessionRef, { sessionId: currentSessionId, lastLogin: serverTimestamp() });
+                    if (sessionUnsubscribe) sessionUnsubscribe();
+                    sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => {
+                        if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) {
+                            signOut(auth).then(() => { alert("🚨 VOCÊ FOI DESCONECTADO! Sua conta foi acessada em outro computador."); window.location.reload(); });
+                        }
+                    });
+                    
+                    loadSavedProjects();
+                } else {
+                    currentUser = null; 
+                    els.loginOverlay.classList.remove('hidden'); 
+                    els.logoutBtn.classList.add('hidden');
+                    els.savedProjectsList.innerHTML = '<li class="p-3 text-gray-500 text-center italic text-xs">Aguardando login...</li>';
+                    if (sessionUnsubscribe) sessionUnsubscribe();
+
+                    els.loginBtn.textContent = "Entrar no Sistema";
+                    els.loginBtn.disabled = false;
+                    els.loginForm.reset(); 
+                    els.loginError.classList.add('hidden');
+                }
+            });
+        }
+
+        els.loginForm.addEventListener('submit', (e) => {
+            e.preventDefault(); els.loginBtn.textContent = "Validando..."; els.loginBtn.disabled = true;
+            signInWithEmailAndPassword(auth, els.loginEmail.value, els.loginPassword.value).catch(err => {
+                els.loginError.textContent = "Dados incorretos ou conta inexistente."; els.loginError.classList.remove('hidden');
+                els.loginBtn.textContent = "Entrar no Sistema"; els.loginBtn.disabled = false;
+            });
+        });
+
+        els.logoutBtn.addEventListener('click', () => { if(confirm("Deseja sair do sistema?")) signOut(auth); });
+
+        function loadSavedProjects() {
+            if (!currentUser) return;
+            const projectsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns');
+            if (unsubscribeProjects) unsubscribeProjects();
+            unsubscribeProjects = onSnapshot(projectsRef, (snapshot) => {
+                els.savedProjectsList.innerHTML = '';
+                if (snapshot.empty) return els.savedProjectsList.innerHTML = '<li class="p-3 text-gray-500 text-center italic">Nenhum cartaz salvo.</li>';
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data(); const li = document.createElement('li');
+                    li.className = 'p-3 flex justify-between items-center hover:bg-gray-50 border-b text-sm transition';
+                    li.innerHTML = `<span class="font-bold text-gray-700 truncate w-1/2">${data.name}</span>`;
+                    const actionsDiv = document.createElement('div'); actionsDiv.className = 'flex gap-2';
+                    const loadBtn = document.createElement('button'); loadBtn.textContent = 'Abrir'; loadBtn.className = 'text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded font-bold border border-blue-200'; loadBtn.onclick = () => loadProjectData(docSnap.id, data);
+                    const delBtn = document.createElement('button'); delBtn.innerHTML = `✕`; delBtn.className = 'text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold border border-red-200'; delBtn.onclick = () => deleteProject(docSnap.id);
+                    actionsDiv.append(loadBtn, delBtn); li.appendChild(actionsDiv); els.savedProjectsList.appendChild(li);
+                });
+            });
+        }
+
+        async function saveCurrentProject() {
+            if (!currentUser) return showToast("Faça login para salvar.", "error");
+            const name = els.projectName.value.trim(); if (!name) return showToast("Dê um nome para sua campanha.", "error");
+            els.saveProjectBtn.disabled = true; els.saveProjectBtn.textContent = 'Salvando...';
+            
+            try {
+                let projectId = currentProjectId;
+                if (currentProjectId && name !== loadedProjectName) { projectId = crypto.randomUUID(); } 
+                else if (!currentProjectId) { projectId = crypto.randomUUID(); }
+
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', projectId), {
+                    name, headerImg: state.headerImg, footerImg: state.footerImg, logoImg: state.logoImg, products: state.products, settings: state.settings, updatedAt: serverTimestamp()
+                });
+                
+                currentProjectId = projectId; loadedProjectName = name; 
+                showToast("Campanha salva com sucesso!", "success");
+            } catch (error) { showToast("Erro ao salvar.", "error"); } 
+            finally { els.saveProjectBtn.disabled = false; els.saveProjectBtn.textContent = 'Salvar'; }
+        }
+
+        function loadProjectData(id, data) {
+            currentProjectId = id; loadedProjectName = data.name || ''; els.projectName.value = loadedProjectName;
+            state.headerImg = data.headerImg || null; state.footerImg = data.footerImg || null; state.logoImg = data.logoImg || null; state.products = data.products || [];
+            if(state.logoImg) els.clearLogoBtn.classList.remove('hidden'); else els.clearLogoBtn.classList.add('hidden');
+            if (data.settings) state.settings = { ...state.settings, ...data.settings };
+            
+            switchTab(state.settings.themeMode);
+            els.posterBgColor.value = state.settings.posterBgColor; els.autoHeaderBg.value = state.settings.autoThemeHeaderBg;
+            els.autoTextColor.value = state.settings.autoThemeTextColor; els.autoFooterBg.value = state.settings.autoThemeFooterBg;
+            els.autoThemeText.value = state.settings.autoThemeText; els.autoThemeSecondaryText.value = state.settings.autoThemeSecondaryText;
+            els.autoTitleScale.value = state.settings.autoTitleScale; els.autoSubScale.value = state.settings.autoSubScale;
+            els.autoTitleSizeDisplay.textContent = `${state.settings.autoTitleScale}%`; els.autoSubSizeDisplay.textContent = `${state.settings.autoSubScale}%`;
+            els.fontFamily.value = state.settings.fontFamily; els.prodColor.value = state.settings.prodColor; els.priceColor.value = state.settings.priceColor;
+            els.prodFontSizeScale.value = state.settings.prodFontScale; els.priceFontSizeScale.value = state.settings.priceFontScale;
+            els.prodFontSizeDisplay.textContent = `${state.settings.prodFontScale}%`; els.priceFontSizeDisplay.textContent = `${state.settings.priceFontScale}%`;
+            
+            // Novos controles de estado
+            els.promoType.value = state.settings.promoType || 'normal';
+            els.priceRegColor.value = state.settings.priceRegColor || '#6b7280';
+            els.priceRegFontSizeScale.value = state.settings.priceRegFontScale || 100;
+            els.priceRegFontSizeDisplay.textContent = `${state.settings.priceRegFontScale || 100}%`;
+            updatePromoUI();
+
+            els.layoutBtns.forEach(b => {
+                if (parseInt(b.dataset.layout) === state.settings.layout) { b.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.remove('border-gray-300', 'bg-white', 'text-gray-600', 'border'); } 
+                else { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); }
+            });
+            renderPosters(); showToast("Campanha carregada!", "success");
+        }
+
+        async function deleteProject(id) {
+            if (!currentUser) return;
+            if(confirm("Excluir permanentemente?")) { 
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', id)); 
+                if (currentProjectId === id) { currentProjectId = null; loadedProjectName = ""; els.projectName.value = ''; } 
+                showToast("Excluída.", "info"); 
+            }
+        }
+
+        function updatePromoUI() {
+            const t = state.settings.promoType;
+            if (t === 'normal') {
+                els.manualProdPriceRegular.classList.add('hidden');
+                els.promoSettingsPanel.classList.add('hidden');
+                els.excelInstructions.innerHTML = `Colunas obrigatórias: <b>1ª Produto</b> | <b>2ª Preço</b>`;
+            } else {
+                els.manualProdPriceRegular.classList.remove('hidden');
+                els.promoSettingsPanel.classList.remove('hidden');
+                els.excelInstructions.innerHTML = `Obrigatório: <b>1ª Produto</b> | <b>2ª Normal</b> | <b>3ª Promoção</b>`;
+                
+                if (t === 'club') {
+                    els.manualProdPriceRegular.placeholder = "Ex: Normal 29,90";
+                    els.textPromoTop.value = state.settings.textClubNormal;
+                    els.textPromoBottom.value = state.settings.textClubPromo;
+                } else {
+                    els.manualProdPriceRegular.placeholder = "Ex: De 29,90";
+                    els.textPromoTop.value = state.settings.textPromoDe;
+                    els.textPromoBottom.value = state.settings.textPromoPor;
+                }
+            }
+        }
+
+        els.promoType.addEventListener('change', (e) => {
+            state.settings.promoType = e.target.value;
+            updatePromoUI();
+            renderPosters();
+        });
+
+        els.textPromoTop.addEventListener('input', (e) => {
+            if(state.settings.promoType === 'club') state.settings.textClubNormal = e.target.value.toUpperCase();
+            else state.settings.textPromoDe = e.target.value.toUpperCase();
+            renderPosters();
+        });
+
+        els.textPromoBottom.addEventListener('input', (e) => {
+            if(state.settings.promoType === 'club') state.settings.textClubPromo = e.target.value.toUpperCase();
+            else state.settings.textPromoPor = e.target.value.toUpperCase();
+            renderPosters();
+        });
+
+        els.priceRegColor.addEventListener('input', (e) => { state.settings.priceRegColor = e.target.value; renderPosters(); });
+        els.priceRegFontSizeScale.addEventListener('input', (e) => { state.settings.priceRegFontScale = parseInt(e.target.value); els.priceRegFontSizeDisplay.textContent = `${state.settings.priceRegFontScale}%`; renderPosters(); });
+
+        let clearProdTimer;
+        els.clearProductsBtn.addEventListener('click', () => { 
+            if(state.products.length === 0) return;
+            if(els.clearProductsBtn.dataset.confirm === "true") {
+                state.products = []; renderPosters(); 
+                els.clearProductsBtn.dataset.confirm = "false";
+                els.clearProductsBtn.textContent = "Limpar Produtos";
+                els.clearProductsBtn.classList.remove('bg-red-600', 'text-white', 'px-3');
+                clearTimeout(clearProdTimer);
+            } else {
+                els.clearProductsBtn.dataset.confirm = "true";
+                els.clearProductsBtn.textContent = "Certeza?";
+                els.clearProductsBtn.classList.add('bg-red-600', 'text-white', 'px-3');
+                clearProdTimer = setTimeout(() => {
+                    els.clearProductsBtn.dataset.confirm = "false";
+                    els.clearProductsBtn.textContent = "Limpar Produtos";
+                    els.clearProductsBtn.classList.remove('bg-red-600', 'text-white', 'px-3');
+                }, 3000);
+            }
+        });
+
+        let newProjTimer;
+        els.newProjectBtn.addEventListener('click', () => {
+            if(els.newProjectBtn.dataset.confirm === "true") {
+                // RESET TOTAL
+                currentProjectId = null; loadedProjectName = ""; els.projectName.value = '';
+                state.products = []; state.logoImg = null; els.logoUpload.value = ''; els.clearLogoBtn.classList.add('hidden');
+                state.headerImg = null; els.headerUpload.value = ''; state.footerImg = null; els.footerUpload.value = '';
+                els.manualProdName.value = ''; els.manualProdPrice.value = ''; els.manualProdPriceRegular.value = ''; els.excelUpload.value = '';
+
+                state.settings = { themeMode: 'image', posterBgColor: "#ffffff", autoThemeHeaderBg: "#ef4444", autoThemeFooterBg: "#dc2626", autoThemeTextColor: "#fef08a", autoThemeText: "OFERTA IMPERDÍVEL", autoThemeSecondaryText: "APROVEITE NOSSAS PROMOÇÕES", autoTitleScale: 100, autoSubScale: 100, fontFamily: "'Inter', sans-serif", prodColor: "#1f2937", priceColor: "#ef4444", prodFontScale: 100, priceFontScale: 100, layout: 1, logoX: 2, logoY: 2, logoW: 28, promoType: 'normal', priceRegColor: "#6b7280", priceRegFontScale: 100, textPromoDe: "DE R$", textPromoPor: "POR", textClubNormal: "PREÇO NORMAL R$", textClubPromo: "CLIENTE CLUBE" };
+
+                switchTab('image');
+                els.posterBgColor.value = "#ffffff"; els.autoHeaderBg.value = "#ef4444"; els.autoTextColor.value = "#fef08a"; els.autoFooterBg.value = "#dc2626"; els.autoThemeText.value = "OFERTA IMPERDÍVEL"; els.autoThemeSecondaryText.value = "APROVEITE NOSSAS PROMOÇÕES"; els.autoTitleScale.value = 100; els.autoSubScale.value = 100; els.autoTitleSizeDisplay.textContent = "100%"; els.autoSubSizeDisplay.textContent = "100%"; els.fontFamily.value = "'Inter', sans-serif"; els.prodColor.value = "#1f2937"; els.priceColor.value = "#ef4444"; els.prodFontSizeScale.value = 100; els.priceFontSizeScale.value = 100; els.prodFontSizeDisplay.textContent = "100%"; els.priceFontSizeDisplay.textContent = "100%"; els.promoType.value = "normal";
+                
+                updatePromoUI();
+                els.layoutBtns.forEach(b => { if (parseInt(b.dataset.layout) === 1) { b.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.remove('border-gray-300', 'bg-white', 'text-gray-600', 'border'); } else { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); } });
+                renderPosters(); showToast("Novo projeto iniciado! Tela limpa.", "success");
+
+                // Restaura o botão
+                els.newProjectBtn.dataset.confirm = "false";
+                els.newProjectBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>CRIAR NOVO PROJETO (Limpar Tudo)</span>`;
+                els.newProjectBtn.classList.replace('text-red-700', 'text-indigo-700'); els.newProjectBtn.classList.replace('border-red-400', 'border-indigo-200'); els.newProjectBtn.classList.replace('bg-red-50', 'bg-indigo-50');
+                clearTimeout(newProjTimer);
+            } else {
+                els.newProjectBtn.dataset.confirm = "true";
+                els.newProjectBtn.innerHTML = `<span>Certeza? Apagará Tudo!</span>`;
+                els.newProjectBtn.classList.replace('text-indigo-700', 'text-red-700'); els.newProjectBtn.classList.replace('border-indigo-200', 'border-red-400'); els.newProjectBtn.classList.replace('bg-indigo-50', 'bg-red-50');
+                newProjTimer = setTimeout(() => {
+                    els.newProjectBtn.dataset.confirm = "false";
+                    els.newProjectBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>CRIAR NOVO PROJETO (Limpar Tudo)</span>`;
+                    els.newProjectBtn.classList.replace('text-red-700', 'text-indigo-700'); els.newProjectBtn.classList.replace('border-red-400', 'border-indigo-200'); els.newProjectBtn.classList.replace('bg-red-50', 'bg-indigo-50');
+                }, 3000);
+            }
+        });
+
+        function switchTab(mode) {
+            state.settings.themeMode = mode;
+            if (mode === 'image') {
+                els.tabImgBtn.classList.replace('bg-white', 'bg-blue-50'); els.tabImgBtn.classList.replace('text-gray-700', 'text-blue-700');
+                els.tabAutoBtn.classList.replace('bg-blue-50', 'bg-white'); els.tabAutoBtn.classList.replace('text-blue-700', 'text-gray-700');
+                els.panelImage.classList.remove('hidden'); els.panelAuto.classList.add('hidden');
+            } else {
+                els.tabAutoBtn.classList.replace('bg-white', 'bg-blue-50'); els.tabAutoBtn.classList.replace('text-gray-700', 'text-blue-700');
+                els.tabImgBtn.classList.replace('bg-blue-50', 'bg-white'); els.tabImgBtn.classList.replace('text-blue-700', 'text-gray-700');
+                els.panelAuto.classList.remove('hidden'); els.panelImage.classList.add('hidden');
+            }
+            renderPosters();
+        }
+
+        els.tabImgBtn.addEventListener('click', () => switchTab('image')); els.tabAutoBtn.addEventListener('click', () => switchTab('auto'));
+
+        els.presetBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const bg = e.target.dataset.bg, text = e.target.dataset.text, foot = e.target.dataset.foot;
+                state.settings.autoThemeHeaderBg = bg; state.settings.autoThemeTextColor = text; state.settings.autoThemeFooterBg = foot;
+                els.autoHeaderBg.value = bg; els.autoTextColor.value = text; els.autoFooterBg.value = foot; renderPosters();
+            });
+        });
+
+        els.autoTitleScale.addEventListener('input', (e) => { state.settings.autoTitleScale = parseInt(e.target.value); els.autoTitleSizeDisplay.textContent = `${state.settings.autoTitleScale}%`; renderPosters(); });
+        els.autoSubScale.addEventListener('input', (e) => { state.settings.autoSubScale = parseInt(e.target.value); els.autoSubSizeDisplay.textContent = `${state.settings.autoSubScale}%`; renderPosters(); });
+
+        function formatPrice(val) {
+            if (val === undefined || val === null) return "0,00";
+            if (typeof val === 'number') return val.toFixed(2).replace('.', ',');
+            let strVal = String(val).trim();
+            if (strVal.includes(',')) return strVal;
+            if (strVal.includes('.')) return strVal.replace('.', ',');
+            return strVal;
+        }
+
+        function splitPrice(priceStr) {
+            const parts = priceStr.split(','); return { intPart: parts[0] || "0", decPart: parts[1] ? "," + parts[1].substring(0,2) : ",00" };
+        }
+
+        function handleImageUpload(e, stateKey) {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width, height = img.height;
+                    const MAX_WIDTH = stateKey === 'logoImg' ? 1000 : 2480; 
+                    if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if(stateKey !== 'logoImg') { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, width, height); }
+                    ctx.drawImage(img, 0, 0, width, height);
+                    state[stateKey] = canvas.toDataURL(stateKey === 'logoImg' ? 'image/png' : 'image/jpeg', 0.75);
+                    if(stateKey === 'logoImg') els.clearLogoBtn.classList.remove('hidden');
+                    renderPosters();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleExcelUpload(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+                const parsedProducts = [];
+                for (let i = 1; i < json.length; i++) {
+                    const row = json[i]; 
+                    if (row && row[0] && row[1]) {
+                        let pReg = "";
+                        if(state.settings.promoType !== 'normal' && row[2]) pReg = formatPrice(row[2]);
+                        
+                        parsedProducts.push({ 
+                            name: String(row[0]).trim(), 
+                            price: formatPrice(row[1]),
+                            priceRegular: pReg,
+                            nameTransform: { x: 0, y: 0, scale: 1 },
+                            priceTransform: { x: 0, y: 0, scale: 1 },
+                            priceRegularTransform: { x: 0, y: 0, scale: 1 }
+                        });
+                    }
+                }
+                if (parsedProducts.length > 0) { state.products = state.products.concat(parsedProducts); renderPosters(); showToast(`${parsedProducts.length} produtos importados!`, "success"); } 
+                else showToast("Nenhum produto válido encontrado.", "error");
+                e.target.value = ''; 
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        els.addManualBtn.addEventListener('click', () => {
+            const name = els.manualProdName.value.trim(), price = els.manualProdPrice.value.trim();
+            let priceReg = els.manualProdPriceRegular.value.trim();
+            if (!name || !price) return showToast("Preencha nome e preço principal.", "error");
+            if (state.settings.promoType !== 'normal' && !priceReg) return showToast("Preencha o preço anterior/normal.", "error");
+
+            state.products.push({ 
+                name: name.toUpperCase(), 
+                price: formatPrice(price),
+                priceRegular: formatPrice(priceReg),
+                nameTransform: { x: 0, y: 0, scale: 1 },
+                priceTransform: { x: 0, y: 0, scale: 1 },
+                priceRegularTransform: { x: 0, y: 0, scale: 1 }
+            });
+            els.manualProdName.value = ''; els.manualProdPrice.value = ''; els.manualProdPriceRegular.value = ''; els.manualProdName.focus(); renderPosters(); showToast("Inserido!", "success");
+        });
+
+        els.clearLogoBtn.addEventListener('click', () => { state.logoImg = null; els.logoUpload.value = ''; els.clearLogoBtn.classList.add('hidden'); renderPosters(); });
+
+        els.headerUpload.addEventListener('change', (e) => handleImageUpload(e, 'headerImg')); els.footerUpload.addEventListener('change', (e) => handleImageUpload(e, 'footerImg')); els.logoUpload.addEventListener('change', (e) => handleImageUpload(e, 'logoImg')); els.excelUpload.addEventListener('change', handleExcelUpload);
+        els.posterBgColor.addEventListener('input', (e) => { state.settings.posterBgColor = e.target.value; renderPosters(); });
+        els.autoHeaderBg.addEventListener('input', (e) => { state.settings.autoThemeHeaderBg = e.target.value; renderPosters(); });
+        els.autoTextColor.addEventListener('input', (e) => { state.settings.autoThemeTextColor = e.target.value; renderPosters(); });
+        els.autoFooterBg.addEventListener('input', (e) => { state.settings.autoThemeFooterBg = e.target.value; renderPosters(); });
+        els.autoThemeText.addEventListener('input', (e) => { state.settings.autoThemeText = e.target.value.toUpperCase(); renderPosters(); });
+        els.autoThemeSecondaryText.addEventListener('input', (e) => { state.settings.autoThemeSecondaryText = e.target.value.toUpperCase(); renderPosters(); });
+        els.fontFamily.addEventListener('change', (e) => { state.settings.fontFamily = e.target.value; renderPosters(); });
+        els.prodColor.addEventListener('input', (e) => { state.settings.prodColor = e.target.value; renderPosters(); });
+        els.priceColor.addEventListener('input', (e) => { state.settings.priceColor = e.target.value; renderPosters(); });
+        els.prodFontSizeScale.addEventListener('input', (e) => { state.settings.prodFontScale = parseInt(e.target.value); els.prodFontSizeDisplay.textContent = `${state.settings.prodFontScale}%`; renderPosters(); });
+        els.priceFontSizeScale.addEventListener('input', (e) => { state.settings.priceFontScale = parseInt(e.target.value); els.priceFontSizeDisplay.textContent = `${state.settings.priceFontScale}%`; renderPosters(); });
+        els.layoutBtns.forEach(btn => { btn.addEventListener('click', (e) => { els.layoutBtns.forEach(b => { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); }); e.currentTarget.classList.remove('border-gray-300', 'bg-white', 'text-gray-600', 'border'); e.currentTarget.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); state.settings.layout = parseInt(e.currentTarget.dataset.layout); renderPosters(); }); });
+        
+        els.saveProjectBtn.addEventListener('click', saveCurrentProject);
+        
+        function renderPosters() {
+            els.previewContainer.innerHTML = ''; const s = state.settings; const root = document.documentElement;
+            root.style.setProperty('--font-family', s.fontFamily); root.style.setProperty('--prod-color', s.prodColor); root.style.setProperty('--price-color', s.priceColor);
+            root.style.setProperty('--poster-bg', s.posterBgColor); root.style.setProperty('--logo-x', `${s.logoX}%`); root.style.setProperty('--logo-y', `${s.logoY}%`); root.style.setProperty('--logo-w', `${s.logoW}%`);
+            
+            let headerHTML = ''; let footerHTML = '';
+            const logoHTML = state.logoImg ? `<div class="logo-container"><img src="${state.logoImg}" class="poster-logo" alt="Logo"><div class="resize-handle"></div></div>` : '';
+
+            let pBase, prBase, tBase, sBase;
+            if (s.layout === 1) { pBase = 4.0; prBase = 12.0; tBase = 4.5; sBase = 2.0; } 
+            else if (s.layout === 2) { pBase = 3.0; prBase = 8.5; tBase = 3.0; sBase = 1.3; } 
+            else { pBase = 2.0; prBase = 5.5; tBase = 2.0; sBase = 1.0; }
+
+            pBase *= (s.prodFontScale / 100); prBase *= (s.priceFontScale / 100); tBase *= (s.autoTitleScale / 100); sBase *= (s.autoSubScale / 100);
+
+            if (s.themeMode === 'image') {
+                headerHTML = state.headerImg ? `<img src="${state.headerImg}" class="poster-header" alt="Cabeçalho">` : '';
+                footerHTML = state.footerImg ? `<img src="${state.footerImg}" class="poster-footer" alt="Rodapé">` : '';
+            } else {
+                headerHTML = `<div class="poster-header-auto" style="background-color: ${s.autoThemeHeaderBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${tBase}rem;">${s.autoThemeText}</span></div>`;
+                footerHTML = `<div class="poster-footer-auto" style="background-color: ${s.autoThemeFooterBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${sBase}rem;">${s.autoThemeSecondaryText}</span></div>`;
+            }
+
+            if (state.products.length === 0) {
+                els.pageCountDisplay.textContent = `Páginas: 0`; els.dynamicPrintStyle.innerHTML = "@page { size: A4 portrait; margin: 0; }";
+                els.previewContainer.innerHTML = `<div class="a4-page layout-1"><div class="poster">${logoHTML}${headerHTML}<div class="poster-body text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg><p class="font-bold text-xl mb-1">Vazio</p></div>${footerHTML}</div></div>`;
+                return;
+            }
+
+            els.dynamicPrintStyle.innerHTML = s.layout === 2 ? "@page { size: A4 landscape; margin: 0; }" : "@page { size: A4 portrait; margin: 0; }";
+            
+            const pages = []; for (let i = 0; i < state.products.length; i += s.layout) pages.push(state.products.slice(i, i + s.layout));
+            els.pageCountDisplay.textContent = `Páginas: ${pages.length}`;
+
+            let globalIndex = 0;
+            pages.forEach((pageItems) => {
+                const pageDiv = document.createElement('div'); pageDiv.className = `a4-page layout-${s.layout}`;
+                pageItems.forEach((prod) => {
+                    if (!prod.nameTransform) prod.nameTransform = { x: 0, y: 0, scale: 1 };
+                    if (!prod.priceTransform) prod.priceTransform = { x: 0, y: 0, scale: 1 };
+                    if (!prod.priceRegularTransform) prod.priceRegularTransform = { x: 0, y: 0, scale: 1 };
+                    
+                    const nameSize = pBase * prod.nameTransform.scale;
+                    const priceSize = prBase * prod.priceTransform.scale;
+                    const priceRegSize = (prBase * 0.4) * (s.priceRegFontScale / 100) * prod.priceRegularTransform.scale;
+                    
+                    const priceF = splitPrice(prod.price);
+                    
+                    let priceRegHTML = '';
+                    let prefixHTML = '';
+
+                    // LÓGICA DE DOIS PREÇOS BLINDADA E SEM RISCO DE CORTE
+                    if (s.promoType === 'club' || s.promoType === 'from_to') {
+                        const textTop = s.promoType === 'club' ? (s.textClubNormal || 'PREÇO NORMAL R$') : (s.textPromoDe || 'DE R$');
+                        const textBottom = s.promoType === 'club' ? (s.textClubPromo || 'CLIENTE CLUBE') : (s.textPromoPor || 'POR');
+                        
+                        priceRegHTML = `
+                        <div class="editable-element" data-index="${globalIndex}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${priceRegSize}rem; width: 100%; text-align: center; margin-top: 15px; font-family: var(--font-family); font-weight: 900; z-index: 10;">
+                            <div style="font-size: 0.6em; color: ${s.priceRegColor}; font-weight: 900; text-transform: uppercase; line-height: 1; margin-bottom: 2px;">${textTop}</div>
+                            <div style="color: ${s.priceRegColor}; font-weight: 900; line-height: 1;">${prod.priceRegular || ''}</div>
+                            <div class="element-resize-handle no-print"></div>
+                        </div>`;
+
+                        prefixHTML = `<div style="font-size: 0.4em; color: var(--price-color); font-weight: 900; text-transform: uppercase; line-height: 1; margin-bottom: 2px; text-align: center;">${textBottom}</div>`;
+                    }
+                    
+                    // A TABELA É O SEGREDO QUE FIXA O R$ NO TOPO DO PDF (HTML2CANVAS SAFE)
+                    pageDiv.innerHTML += `<div class="poster">${logoHTML}${headerHTML}
+                        <div class="poster-body" style="font-family: var(--font-family);">
+                            <div class="product-name editable-element" data-index="${globalIndex}" data-type="name" style="transform: translate(${prod.nameTransform.x}px, ${prod.nameTransform.y}px); font-size: ${nameSize}rem; font-family: var(--font-family); font-weight: 900;">
+                                ${prod.name}
+                                <div class="element-resize-handle no-print"></div>
+                            </div>
+                            ${priceRegHTML}
+                            <div class="product-price editable-element" data-index="${globalIndex}" data-type="price" style="transform: translate(${prod.priceTransform.x}px, ${prod.priceTransform.y}px); font-size: ${priceSize}rem; color: var(--price-color); font-family: var(--font-family); font-weight: 900; z-index: 10;">
+                                ${prefixHTML}
+                                <table cellpadding="0" cellspacing="0" style="margin: 0 auto; border-collapse: collapse; line-height: 1;">
+                                    <tr>
+                                        <td style="vertical-align: top; font-size: 0.4em; padding-top: 0.15em; padding-right: 0.05em; font-weight: 900;">R$</td>
+                                        <td style="vertical-align: top; font-size: 1em; font-weight: 900; line-height: 0.8;">${priceF.intPart}</td>
+                                        <td style="vertical-align: top; font-size: 0.5em; padding-top: 0.1em; padding-left: 0.05em; font-weight: 900;">${priceF.decPart}</td>
+                                    </tr>
+                                </table>
+                                <div class="element-resize-handle no-print"></div>
+                            </div>
+                        </div>${footerHTML}</div>`;
+                    globalIndex++;
+                });
+                for (let j = 0; j < s.layout - pageItems.length; j++) pageDiv.innerHTML += `<div class="poster flex items-center justify-center opacity-30"></div>`;
+                els.previewContainer.appendChild(pageDiv);
+            });
+        }
+
+        let isDraggingLogo = false, isResizingLogo = false, startMouseX, startMouseY, startLogoX, startLogoY, startLogoW, activePoster = null;
+        let isDraggingElement = false, isResizingElement = false;
+        let activeElIndex = -1, activeElType = null, activeDomElement = null;
+        let startElX, startElY, startElScale;
+
+        document.addEventListener('mousedown', (e) => {
+            const elResizeHandle = e.target.closest('.element-resize-handle');
+            const editableEl = e.target.closest('.editable-element');
+            
+            if (elResizeHandle) {
+                isResizingElement = true;
+                activeDomElement = editableEl;
+                activeElIndex = parseInt(editableEl.dataset.index);
+                activeElType = editableEl.dataset.type;
+                startMouseX = e.clientX;
+                startElScale = state.products[activeElIndex][activeElType + 'Transform'].scale;
+                e.preventDefault(); e.stopPropagation(); 
+                return;
+            } else if (editableEl) {
+                isDraggingElement = true;
+                activeDomElement = editableEl;
+                activeElIndex = parseInt(editableEl.dataset.index);
+                activeElType = editableEl.dataset.type;
+                startMouseX = e.clientX;
+                startMouseY = e.clientY;
+                startElX = state.products[activeElIndex][activeElType + 'Transform'].x;
+                startElY = state.products[activeElIndex][activeElType + 'Transform'].y;
+                e.preventDefault();
+                return;
+            }
+
+            if (!state.logoImg) return;
+            if (e.target.classList.contains('resize-handle')) { isResizingLogo = true; activePoster = e.target.closest('.poster'); startMouseX = e.clientX; startLogoW = state.settings.logoW; e.preventDefault(); } 
+            else if (e.target.closest('.logo-container')) { isDraggingLogo = true; activePoster = e.target.closest('.poster'); startMouseX = e.clientX; startMouseY = e.clientY; startLogoX = state.settings.logoX; startLogoY = state.settings.logoY; e.preventDefault(); }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDraggingElement && activeDomElement) {
+                const dx = e.clientX - startMouseX, dy = e.clientY - startMouseY;
+                const newX = startElX + dx, newY = startElY + dy;
+                state.products[activeElIndex][activeElType + 'Transform'].x = newX;
+                state.products[activeElIndex][activeElType + 'Transform'].y = newY;
+                activeDomElement.style.transform = `translate(${newX}px, ${newY}px)`;
+                return;
+            }
+            
+            if (isResizingElement && activeDomElement) {
+                const dx = e.clientX - startMouseX;
+                const scaleDelta = dx / 100;
+                let newScale = startElScale + scaleDelta;
+                if (newScale < 0.2) newScale = 0.2; if (newScale > 4.0) newScale = 4.0; 
+                
+                state.products[activeElIndex][activeElType + 'Transform'].scale = newScale;
+                
+                const s = state.settings;
+                let pBase, prBase;
+                if (s.layout === 1) { pBase = 4.0; prBase = 12.0; } else if (s.layout === 2) { pBase = 3.0; prBase = 8.5; } else { pBase = 2.0; prBase = 5.5; }
+                
+                const baseSize = activeElType === 'name' ? (pBase * (s.prodFontScale / 100)) : 
+                                 activeElType === 'price' ? (prBase * (s.priceFontScale / 100)) : 
+                                 (prBase * 0.4 * (s.priceRegFontScale / 100));
+
+                activeDomElement.style.fontSize = `${baseSize * newScale}rem`;
+                return;
+            }
+
+            if (!isDraggingLogo && !isResizingLogo) return;
+            const posterRect = activePoster.getBoundingClientRect();
+            if (isDraggingLogo) {
+                const newX = startLogoX + (((e.clientX - startMouseX) / posterRect.width) * 100);
+                const newY = startLogoY + (((e.clientY - startMouseY) / posterRect.height) * 100);
+                state.settings.logoX = newX; state.settings.logoY = newY;
+                document.documentElement.style.setProperty('--logo-x', `${newX}%`); document.documentElement.style.setProperty('--logo-y', `${newY}%`);
+            }
+            if (isResizingLogo) {
+                let newW = startLogoW + (((e.clientX - startMouseX) / posterRect.width) * 100);
+                if (newW < 5) newW = 5; if (newW > 100) newW = 100; 
+                state.settings.logoW = newW; document.documentElement.style.setProperty('--logo-w', `${newW}%`);
+            }
+        });
+        
+        document.addEventListener('mouseup', () => { 
+            isDraggingLogo = false; isResizingLogo = false; activePoster = null; 
+            isDraggingElement = false; isResizingElement = false; activeDomElement = null;
+        });
+        
+        els.printBtn.addEventListener('click', () => {
+            if(state.products.length === 0) return showToast("Adicione produtos antes de imprimir!", "error");
+            window.print();
+        });
+
+        els.pdfBtn.addEventListener('click', async () => {
+            if(state.products.length === 0) return showToast("Adicione produtos antes de gerar o PDF!", "error");
+            
+            const originalText = els.pdfBtn.innerHTML;
+            els.pdfBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> GERANDO...';
+            els.pdfBtn.disabled = true;
+
+            document.documentElement.classList.add('pdf-exporting');
+            document.body.classList.add('pdf-exporting');
+            window.scrollTo(0, 0);
+
+            setTimeout(async () => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const isLandscape = state.settings.layout === 2;
+                    
+                    const pdf = new jsPDF({
+                        orientation: isLandscape ? 'landscape' : 'portrait',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const pages = document.querySelectorAll('.a4-page');
+
+                    for (let i = 0; i < pages.length; i++) {
+                        const canvas = await html2canvas(pages[i], {
+                            scale: 2, 
+                            useCORS: true,
+                            logging: false,
+                            backgroundColor: '#ffffff'
+                        });
+
+                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+                        if (i > 0) {
+                            pdf.addPage();
+                        }
+
+                        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                    }
+
+                    pdf.save(`Cartazes_PromoPrint_${new Date().getTime()}.pdf`);
+                    showToast("PDF salvo no seu computador!", "success");
+
+                } catch (err) {
+                    console.error(err);
+                    showToast("Erro ao gerar PDF. Tente imprimir direto.", "error");
+                } finally {
+                    document.documentElement.classList.remove('pdf-exporting');
+                    document.body.classList.remove('pdf-exporting');
+                    els.pdfBtn.innerHTML = originalText;
+                    els.pdfBtn.disabled = false;
+                }
+            }, 800); 
+        });
+
+        window.addEventListener('DOMContentLoaded', () => { renderPosters(); });
+    </script>
+</body>
+</html>

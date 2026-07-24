@@ -3,514 +3,902 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TESTE - PromoPrint Maker</title>
+    <title>Gerador de Cartazes de Supermercado</title>
+    <!-- Tailwind CSS para Estilização da Interface -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS para ler arquivos Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Fontes do Google Atualizadas e Inseridas -->
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Caveat:wght@700&family=Chewy&family=Fira+Sans+Extra+Condensed:wght@700;900&family=Inter:wght@400;700;900&family=Oswald:wght@400;700&family=Permanent+Marker&family=Roboto:wght@400;700;900&family=Impact&display=swap" rel="stylesheet">
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@700&family=Chewy&family=Fira+Sans+Extra+Condensed:wght@900&family=Permanent+Marker&display=swap');
-
         :root {
-            --font-main: 'Impact', sans-serif;
-            --color-theme: #e53e3e;
+            --font-family: 'Inter', sans-serif;
+            --prod-color: #1f2937;
+            --price-color: #ef4444;
+            --bg-color: #ffffff;
+            --poster-bg: #ffffff;
+            --logo-x: 2%;
+            --logo-y: 2%;
+            --logo-w: 28%;
         }
 
         body {
             background-color: #f3f4f6;
-            font-family: sans-serif;
+            font-family: 'Inter', sans-serif;
         }
 
-        /* Bloqueio de UI e Liberação de Páginas na Impressão */
-        @media print {
-            body { background: white; }
-            .no-print { display: none !important; }
-            .print-area { 
-                width: 100% !important; 
-                margin: 0 !important; 
-                padding: 0 !important; 
-            }
-            .page-a4 {
-                width: 210mm;
-                height: 297mm;
-                page-break-after: always;
-                margin: 0;
-                box-shadow: none !important;
-            }
-            /* A mágica que resolve a impressão de várias páginas */
-            html, body, .print-area {
-                height: auto !important;
-                overflow: visible !important;
-                display: block !important;
-            }
-        }
-
-        .page-a4 {
-            width: 210mm;
-            height: 297mm;
-            background: white;
-            margin: 20px auto;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            position: relative;
-            overflow: hidden;
-            display: grid;
-            gap: 10px;
-            padding: 20px;
-        }
-
-        /* Layouts de Grade */
-        .grid-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
-        .grid-2 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-        .grid-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
-
-        .poster-item {
-            border: 1px dashed #ccc;
+        .preview-container {
+            width: 100%;
             display: flex;
             flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .a4-page {
+            background: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            
+            page-break-after: always;
+            break-after: page;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .a4-page:last-child {
+            page-break-after: auto;
+            break-after: auto;
+        }
+
+        .layout-1 { width: 210mm !important; height: 297mm !important; }
+        .layout-1 .poster { width: 100%; height: 100%; }
+
+        .layout-2 { width: 297mm !important; height: 210mm !important; }
+        .layout-2 .poster { width: 50%; height: 100%; border-right: 1px dashed #ccc; }
+
+        .layout-4 { width: 210mm !important; height: 297mm !important; }
+        .layout-4 .poster { width: 50%; height: 50%; border-right: 1px dashed #ccc; border-bottom: 1px dashed #ccc; }
+
+        .poster {
+            display: flex;
+            flex-direction: column;
+            background-color: var(--poster-bg);
+            box-sizing: border-box;
+            overflow: hidden;
             position: relative;
-            padding: 10px;
-            background-size: cover;
-            background-position: center;
         }
 
-        /* Fontes e Pesos Forçados */
-        .text-heavy {
-            font-family: var(--font-main);
-            font-weight: 900 !important;
-            color: #1a202c;
-            text-align: center;
-            line-height: 1.1;
+        .poster-header, .poster-footer, .poster-header-auto, .poster-footer-auto {
+            position: absolute; left: 0; width: 100%; height: 20% !important; object-fit: cover; z-index: 10; box-sizing: border-box;
+        }
+        .poster-header, .poster-header-auto { top: 0; }
+        .poster-footer, .poster-footer-auto { bottom: 0; }
+
+        .poster-header-auto, .poster-footer-auto {
+            display: flex; align-items: center; justify-content: center; text-transform: uppercase; font-weight: 900; text-align: center; padding: 0 5%; font-family: var(--font-family);
         }
 
-        .color-theme { color: var(--color-theme) !important; }
+        .logo-container {
+            position: absolute; top: var(--logo-y); left: var(--logo-x); width: var(--logo-w); z-index: 40; cursor: grab; border: 2px dashed transparent; box-sizing: border-box; transition: border-color 0.2s;
+        }
+        .logo-container:hover { border-color: rgba(59, 130, 246, 0.5); }
+        .logo-container:active { cursor: grabbing; border-color: rgba(59, 130, 246, 1); }
 
-        /* Tabela Blindada de Preço */
-        .price-table {
-            margin: 0 auto;
-            border-collapse: collapse;
-        }
-        .price-table td {
-            padding: 0;
-            vertical-align: top;
-            font-family: var(--font-main);
-            font-weight: 900 !important;
-            line-height: 0.8;
-        }
-        .symbol-td { font-size: 0.4em; padding-top: 0.1em; }
-        .cents-td { font-size: 0.5em; padding-top: 0.1em; }
+        .poster-logo { width: 100%; height: auto; object-fit: contain; pointer-events: none; display: block; }
 
-        /* Blocos Redimensionáveis Independentes */
-        .resize-container {
-            position: relative;
-            border: 1px dashed transparent;
-            display: inline-block;
-            margin: 5px auto;
-        }
-        .resize-container:hover { border-color: #3b82f6; }
         .resize-handle {
-            position: absolute;
-            bottom: -5px;
-            right: -5px;
-            width: 15px;
-            height: 15px;
-            background: #10b981;
-            border-radius: 50%;
-            cursor: se-resize;
-            display: none;
+            position: absolute; bottom: -6px; right: -6px; width: 16px; height: 16px; background-color: #3b82f6; border: 2px solid white; border-radius: 50%; cursor: se-resize; display: none; z-index: 50; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
-        .resize-container:hover .resize-handle { display: block; }
-        
-        .header-img, .footer-img {
-            width: 100%;
-            object-fit: contain;
+        .logo-container:hover .resize-handle, .logo-container:active .resize-handle { display: block; }
+
+        .poster-body {
+            position: absolute; top: 20%; left: 0; width: 100%; height: 60% !important; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5%; text-align: center; font-family: var(--font-family); box-sizing: border-box; overflow: visible; z-index: 5;
         }
-        .header-img { max-height: 15%; margin-bottom: 10px; }
-        .footer-img { max-height: 15%; margin-top: auto; }
+
+        .editable-element {
+            position: relative; cursor: grab; border: 2px dashed transparent; transition: border-color 0.2s; box-sizing: border-box; z-index: 20; font-family: var(--font-family);
+        }
+        .editable-element:hover { border-color: rgba(59, 130, 246, 0.4); }
+        .editable-element:active { cursor: grabbing; border-color: rgba(59, 130, 246, 0.8); }
+        .editable-element:hover .element-resize-handle, .editable-element:active .element-resize-handle { display: block; }
         
-        .global-club-logo {
-            object-fit: contain;
-            margin: 0 auto;
+        .element-resize-handle {
+            position: absolute; bottom: -6px; right: -6px; width: 16px; height: 16px; background-color: #10b981; border: 2px solid white; border-radius: 50%; cursor: se-resize; display: none; z-index: 50; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            .no-print-bg { background: none !important; }
+            
+            .logo-container { border: none !important; }
+            .resize-handle { display: none !important; }
+            .editable-element { border: none !important; }
+            .element-resize-handle { display: none !important; }
+
+            /* SOLUÇÃO DE IMPRESSÃO: Liberando a rolagem da tela */
+            body, html {
+                height: auto !important; 
+                min-height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: white !important;
+                overflow: visible !important; 
+            }
+
+            main {
+                height: auto !important;
+                overflow: visible !important;
+                position: static !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
+            }
+
+            .preview-container {
+                padding: 0 !important;
+                margin: 0 !important;
+                gap: 0;
+                display: block !important; 
+                overflow: visible !important;
+            }
+
+            .a4-page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                border: none !important;
+                page-break-after: always;
+                break-after: page;
+            }
+
+            #toastContainer { display: none !important; }
+
+            @page { margin: 0; }
         }
     </style>
+    <style id="dynamicPrintStyle">
+        @page { size: A4 portrait; margin: 0; }
+    </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="h-screen flex flex-col md:flex-row overflow-hidden relative">
 
-    <!-- Menu Lateral (Não sai na impressão) -->
-    <div class="w-80 bg-gray-900 text-white p-5 overflow-y-auto no-print flex flex-col gap-6">
-        <h1 class="text-2xl font-bold text-center text-blue-400">PromoPrint Maker</h1>
-        
-        <!-- Ação Principal -->
-        <div class="bg-green-600 p-4 rounded-lg text-center cursor-pointer hover:bg-green-500 transition shadow-lg" onclick="window.print()">
-            <h2 class="text-xl font-bold">Gerar PDF / Imprimir</h2>
-            <p class="text-xs mt-2">Lembre-se de ativar "Gráficos de Plano de Fundo" na janela de impressão.</p>
-        </div>
-
-        <!-- Fonte e Cores -->
-        <div class="space-y-2 border-b border-gray-700 pb-4">
-            <label class="text-sm font-semibold">Fonte Principal</label>
-            <select id="fontSelect" class="w-full p-2 bg-gray-800 rounded text-white border border-gray-700" onchange="updateStyles()">
-                <option value="'Impact', sans-serif">Supermercado (Impact)</option>
-                <option value="'Bebas Neue', cursive">Bebas Neue (Moderna)</option>
-                <option value="'Fira Sans Extra Condensed', sans-serif">Fira Sans (Condensada)</option>
-                <option value="'Chewy', cursive">Chewy (Divertida)</option>
-                <option value="'Permanent Marker', cursive">Marker (Pincel)</option>
-                <option value="'Caveat', cursive">Caveat (Manuscrita)</option>
-            </select>
+    <div id="loginOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-[100]">
+        <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md border-t-4 border-blue-600">
+            <h2 class="text-2xl font-black text-center text-gray-800 mb-2">PromoPrint Maker</h2>
+            <p class="text-center text-gray-500 text-sm mb-6">Acesse para gerenciar seus cartazes</p>
             
-            <label class="text-sm font-semibold mt-3 block">Cor Tema (Preço Principal/Clube)</label>
-            <input type="color" id="themeColor" value="#e53e3e" class="w-full h-10 rounded cursor-pointer" onchange="updateStyles()">
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700">E-mail de Acesso</label>
+                    <input type="email" id="loginEmail" placeholder="loja@exemplo.com" required class="mt-1 w-full p-3 border border-gray-300 rounded bg-gray-50 focus:bg-white focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700">Senha</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required class="mt-1 w-full p-3 border border-gray-300 rounded bg-gray-50 focus:bg-white focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                </div>
+                <button type="submit" id="loginBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 shadow-md transition transform active:scale-95">Entrar no Sistema</button>
+            </form>
+            <p id="loginError" class="text-red-600 text-sm font-bold text-center mt-4 hidden bg-red-50 p-2 rounded"></p>
         </div>
-
-        <!-- Layout Normal (Oculto via JS se Automático) -->
-        <div id="manualLayoutBox" class="space-y-2 border-b border-gray-700 pb-4">
-            <label class="text-sm font-semibold">Layout da Folha (Manual)</label>
-            <select id="layoutSelect" class="w-full p-2 bg-gray-800 rounded text-white border border-gray-700" onchange="renderPosters()">
-                <option value="1">1 Produto (A4 Inteiro)</option>
-                <option value="2">2 Produtos (Metade)</option>
-                <option value="4">4 Produtos (Pequeno)</option>
-            </select>
-        </div>
-
-        <!-- Importar Planilha -->
-        <div class="space-y-2 border-b border-gray-700 pb-4 bg-gray-800 p-3 rounded">
-            <label class="text-sm font-semibold text-blue-300">Importar Planilha (Excel)</label>
-            <input type="file" id="excelUpload" accept=".xlsx, .xls" class="w-full text-sm" onchange="handleExcelUpload(event)">
-            <p class="text-xs text-gray-400 mt-1">Colunas: Nome | Preço 1 | Preço 2<br>Opcional p/ Auto-Layout: Grande | Médio | Pequeno</p>
-        </div>
-
-        <!-- Estrutura / Imagens -->
-        <div class="space-y-4 border-b border-gray-700 pb-4">
-            <label class="text-sm font-semibold text-yellow-400">Imagens Fixas</label>
-            
-            <div>
-                <label class="text-xs">Cabeçalho (Topo)</label>
-                <input type="file" id="headerUpload" accept="image/*" class="w-full text-xs mb-1" onchange="handleImageUpload(event, 'header')">
-                <button onclick="removeImage('header')" class="text-xs bg-red-600 px-2 py-1 rounded w-full hover:bg-red-500">Remover Cabeçalho</button>
-            </div>
-            
-            <div>
-                <label class="text-xs">Rodapé (Base)</label>
-                <input type="file" id="footerUpload" accept="image/*" class="w-full text-xs mb-1" onchange="handleImageUpload(event, 'footer')">
-                <button onclick="removeImage('footer')" class="text-xs bg-red-600 px-2 py-1 rounded w-full hover:bg-red-500">Remover Rodapé</button>
-            </div>
-        </div>
-
-        <!-- Configuração Clube / Secundário -->
-        <div class="space-y-2 border-b border-gray-700 pb-4">
-            <label class="text-sm font-semibold text-pink-400">Tipo de Preço Secundário</label>
-            <select id="priceType" class="w-full p-2 bg-gray-800 rounded text-white border border-gray-700" onchange="toggleClubMenu()">
-                <option value="depor">De / Por</option>
-                <option value="clube">Clube de Vantagens</option>
-            </select>
-
-            <!-- Textos Base -->
-            <div class="flex gap-2 mt-2">
-                <input type="text" id="text1" value="PREÇO NORMAL" class="w-1/2 p-1 bg-gray-800 text-xs text-white border border-gray-600 rounded" oninput="updatePostersSilent()">
-                <input type="text" id="text2" value="CLIENTE CLUBE" class="w-1/2 p-1 bg-gray-800 text-xs text-white border border-gray-600 rounded" oninput="updatePostersSilent()">
-            </div>
-
-            <!-- Logo do Clube (Aparece se Clube for selecionado) -->
-            <div id="clubLogoMenu" class="hidden mt-3 bg-gray-800 p-2 rounded">
-                <label class="text-xs text-pink-300">Logomarca do Clube (Substitui Texto 2)</label>
-                <input type="file" id="clubUpload" accept="image/*" class="w-full text-xs mb-1" onchange="handleImageUpload(event, 'club')">
-                <button onclick="removeImage('club')" class="text-xs bg-red-600 px-2 py-1 rounded w-full hover:bg-red-500 mb-2">Remover Logo</button>
-                
-                <label class="text-xs text-gray-300">Tamanho Global da Logo</label>
-                <input type="range" id="clubScale" min="50" max="1000" value="150" class="w-full" oninput="updatePostersSilent()">
-            </div>
-        </div>
-
-        <button onclick="clearAll()" class="bg-red-700 p-2 rounded text-sm hover:bg-red-600">Limpar Tudo</button>
     </div>
 
-    <!-- Área Principal de Visualização -->
-    <div class="flex-1 overflow-auto print-area bg-gray-200 p-10" id="printContainer">
-        <!-- Renderizado via JS -->
-    </div>
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
 
-    <script>
-        let state = {
-            products: [],
-            autoQueues: { grande: [], medio: [], pequeno: [] },
-            isAutoLayout: false,
-            images: { header: null, footer: null, club: null }
-        };
+    <aside class="no-print w-full md:w-[420px] bg-white shadow-xl h-full flex flex-col overflow-y-auto z-10 border-r border-gray-200">
+        <div class="p-6 bg-blue-700 text-white shrink-0 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                    PromoPrint
+                </h1>
+                <p class="text-blue-200 text-xs mt-1">SISTEMA GERADOR DE CARTAZES</p>
+            </div>
+            <button id="logoutBtn" class="text-xs bg-blue-800 hover:bg-blue-900 px-3 py-2 rounded font-bold shadow transition hidden">Sair</button>
+        </div>
 
-        function updateStyles() {
-            document.documentElement.style.setProperty('--font-main', document.getElementById('fontSelect').value);
-            document.documentElement.style.setProperty('--color-theme', document.getElementById('themeColor').value);
-        }
-
-        function toggleClubMenu() {
-            const type = document.getElementById('priceType').value;
-            const clubMenu = document.getElementById('clubLogoMenu');
-            const text1 = document.getElementById('text1');
-            const text2 = document.getElementById('text2');
-
-            if(type === 'clube') {
-                clubMenu.classList.remove('hidden');
-                text1.value = "PREÇO NORMAL";
-                text2.value = "CLIENTE CLUBE";
-            } else {
-                clubMenu.classList.add('hidden');
-                text1.value = "DE R$";
-                text2.value = "POR R$";
-            }
-            updatePostersSilent();
-        }
-
-        function handleImageUpload(event, type) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    state.images[type] = e.target.result;
-                    renderPosters();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function removeImage(type) {
-            state.images[type] = null;
-            document.getElementById(`${type}Upload`).value = "";
-            renderPosters();
-        }
-
-        function handleExcelUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(firstSheet);
-
-                state.products = [];
-                state.autoQueues = { grande: [], medio: [], pequeno: [] };
-                state.isAutoLayout = false;
-
-                if (rows.length > 0) {
-                    const firstRow = rows[0];
-                    // Detecta colunas de inteligência
-                    if ('Grande' in firstRow || 'Médio' in firstRow || 'Pequeno' in firstRow ||
-                        'grande' in firstRow || 'médio' in firstRow || 'pequeno' in firstRow) {
-                        state.isAutoLayout = true;
-                    }
-                }
-
-                document.getElementById('manualLayoutBox').style.display = state.isAutoLayout ? 'none' : 'block';
-
-                rows.forEach(row => {
-                    let name = row['Produto'] || row['Nome'] || '';
-                    let p1 = row['Preço 1'] || row['Preco 1'] || '';
-                    let p2 = row['Preço 2'] || row['Preco 2'] || '';
-                    let prodData = { name, p1, p2 };
-
-                    if (state.isAutoLayout) {
-                        let qG = parseInt(row['Grande'] || row['grande'] || 0) || 0;
-                        let qM = parseInt(row['Médio'] || row['médio'] || row['Medio'] || 0) || 0;
-                        let qP = parseInt(row['Pequeno'] || row['pequeno'] || 0) || 0;
-
-                        for(let i=0; i<qG; i++) state.autoQueues.grande.push(prodData);
-                        for(let i=0; i<qM; i++) state.autoQueues.medio.push(prodData);
-                        for(let i=0; i<qP; i++) state.autoQueues.pequeno.push(prodData);
-                    } else {
-                        state.products.push(prodData);
-                    }
-                });
-
-                renderPosters();
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function splitPrice(priceStr) {
-            let str = priceStr.toString().replace('R$', '').trim();
-            if(!str.includes(',') && !str.includes('.')) str += ',00';
-            str = str.replace('.', ',');
-            let parts = str.split(',');
-            return {
-                main: parts[0],
-                cents: parts[1] ? ',' + parts[1] : ',00'
-            };
-        }
-
-        function renderPosters() {
-            const container = document.getElementById('printContainer');
-            container.innerHTML = '';
-            
-            let pagesHTML = '';
-
-            if (state.isAutoLayout) {
-                // Renders Filas (Queues)
-                pagesHTML += buildPages(state.autoQueues.grande, 1);
-                pagesHTML += buildPages(state.autoQueues.medio, 2);
-                pagesHTML += buildPages(state.autoQueues.pequeno, 4);
-            } else {
-                const layout = parseInt(document.getElementById('layoutSelect').value);
-                pagesHTML += buildPages(state.products, layout);
-            }
-
-            container.innerHTML = pagesHTML;
-        }
-
-        function buildPages(productList, layoutCount) {
-            if (productList.length === 0) return '';
-            
-            let html = '';
-            for (let i = 0; i < productList.length; i += layoutCount) {
-                const chunk = productList.slice(i, i + layoutCount);
-                html += `<div class="page-a4 grid-${layoutCount}">`;
+        <div class="p-6 flex flex-col gap-6 flex-grow">
+            <!-- 1. Visual do Cartaz -->
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold text-gray-800 border-b pb-2">1. Visual do Cartaz</h2>
                 
-                chunk.forEach(prod => {
-                    html += buildPosterItem(prod, layoutCount);
-                });
-                
-                html += `</div>`;
-            }
-            return html;
-        }
-
-        function buildPosterItem(prod, layoutCount) {
-            const type = document.getElementById('priceType').value;
-            const text1 = document.getElementById('text1').value;
-            const text2 = document.getElementById('text2').value;
-            const clubScale = document.getElementById('clubScale').value;
-            
-            // Cálculos dinâmicos baseados no formato da folha
-            const baseScale = layoutCount === 1 ? 1 : layoutCount === 2 ? 0.7 : 0.5;
-            
-            const p1 = splitPrice(prod.p1);
-            const p2 = splitPrice(prod.p2);
-
-            let headerHtml = state.images.header ? `<img src="${state.images.header}" class="header-img">` : '';
-            let footerHtml = state.images.footer ? `<img src="${state.images.footer}" class="footer-img">` : '';
-
-            // Bloco Secundário (Texto ou Logo)
-            let secondaryBlock = '';
-            if (type === 'clube' && state.images.club) {
-                secondaryBlock = `<img src="${state.images.club}" class="global-club-logo" style="width: ${clubScale}px;">`;
-            } else {
-                secondaryBlock = `<div class="text-heavy color-theme" style="font-size: ${40 * baseScale}px;">${text2}</div>`;
-            }
-
-            return `
-            <div class="poster-item">
-                ${headerHtml}
-                
-                <div class="flex-1 flex flex-col justify-center items-center">
-                    
-                    <div class="resize-container text-heavy" style="font-size: ${80 * baseScale}px;">
-                        ${prod.name}
-                        <div class="resize-handle"></div>
+                <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-md border border-gray-200 shadow-sm">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Logo da Loja</label>
+                        <input type="file" id="logoUpload" accept="image/*" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer">
+                        <button id="clearLogoBtn" class="text-[10px] font-bold text-red-500 hover:text-red-700 mt-1 hidden underline">Remover Logo</button>
                     </div>
-
-                    ${prod.p1 ? `
-                    <div class="resize-container mt-4">
-                        <div class="text-heavy" style="font-size: ${30 * baseScale}px; color: #4a5568;">
-                            ${text1}
-                        </div>
-                        <table class="price-table" style="font-size: ${60 * baseScale}px; color: #4a5568;">
-                            <tr>
-                                <td class="symbol-td">R$</td>
-                                <td>${p1.main}</td>
-                                <td class="cents-td">${p1.cents}</td>
-                            </tr>
-                        </table>
-                        <div class="resize-handle"></div>
-                    </div>
-                    ` : ''}
-
-                    <div class="resize-container mt-4">
-                        ${secondaryBlock}
-                        <table class="price-table color-theme" style="font-size: ${160 * baseScale}px;">
-                            <tr>
-                                <td class="symbol-td">R$</td>
-                                <td>${p2.main}</td>
-                                <td class="cents-td">${p2.cents}</td>
-                            </tr>
-                        </table>
-                        <div class="resize-handle"></div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Fundo da Folha (Papel)</label>
+                        <input type="color" id="posterBgColor" value="#ffffff" class="h-8 w-full rounded border border-gray-300 cursor-pointer">
                     </div>
                 </div>
 
-                ${footerHtml}
-            </div>`;
-        }
+                <div class="flex rounded-md shadow-sm" role="group">
+                    <button type="button" id="tabImgBtn" class="flex-1 px-4 py-2 text-sm font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-l-lg hover:bg-blue-100 transition">
+                        Sua Arte (Imagem)
+                    </button>
+                    <button type="button" id="tabAutoBtn" class="flex-1 px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-50 transition">
+                        Tema Automático
+                    </button>
+                </div>
 
-        function updatePostersSilent() {
-            if(state.products.length > 0 || state.isAutoLayout) {
-                renderPosters();
+                <div id="panelImage" class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cabeçalho (Topo)</label>
+                        <input type="file" id="headerUpload" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
+                        <button id="clearHeaderBtn" class="text-[10px] font-bold text-red-500 hover:text-red-700 mt-1 hidden underline">Remover Cabeçalho</button>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Rodapé (Base)</label>
+                        <input type="file" id="footerUpload" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
+                        <button id="clearFooterBtn" class="text-[10px] font-bold text-red-500 hover:text-red-700 mt-1 hidden underline">Remover Rodapé</button>
+                    </div>
+                </div>
+
+                <div id="panelAuto" class="space-y-4 hidden bg-yellow-50 p-4 border border-yellow-200 rounded-lg shadow-inner">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 mb-2 uppercase">Cores Prontas</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="preset-btn text-xs py-1.5 rounded font-bold bg-red-600 text-white hover:bg-red-700 shadow" data-bg="#ef4444" data-text="#fef08a" data-foot="#dc2626">Padrão Promo</button>
+                            <button class="preset-btn text-xs py-1.5 rounded font-bold bg-green-600 text-white hover:bg-green-700 shadow" data-bg="#16a34a" data-text="#ffffff" data-foot="#15803d">Hortifruti</button>
+                            <button class="preset-btn text-xs py-1.5 rounded font-bold bg-gray-900 text-yellow-400 border border-gray-700 hover:bg-gray-800 shadow" data-bg="#111827" data-text="#fbbf24" data-foot="#000000">Carnes/FDS</button>
+                            <button class="preset-btn text-xs py-1.5 rounded font-bold bg-black text-white border border-gray-700 hover:bg-gray-900 shadow" data-bg="#000000" data-text="#ffffff" data-foot="#111111">Black Friday</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Fundo Topo</label><input type="color" id="autoHeaderBg" value="#ef4444" class="h-8 w-full rounded border border-gray-300 cursor-pointer shadow-sm"></div>
+                        <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Cor da Letra</label><input type="color" id="autoTextColor" value="#fef08a" class="h-8 w-full rounded border border-gray-300 cursor-pointer shadow-sm"></div>
+                        <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Fundo Rodapé</label><input type="color" id="autoFooterBg" value="#dc2626" class="h-8 w-full rounded border border-gray-300 cursor-pointer shadow-sm"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-2">
+                        <div><label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">Aumentar Topo <span id="autoTitleSizeDisplay" class="text-blue-600">100%</span></label><input type="range" id="autoTitleScale" min="50" max="250" value="100" class="w-full h-2 bg-yellow-200 rounded-lg appearance-none cursor-pointer"></div>
+                        <div><label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">Aumentar Rodapé <span id="autoSubSizeDisplay" class="text-blue-600">100%</span></label><input type="range" id="autoSubScale" min="50" max="250" value="100" class="w-full h-2 bg-yellow-200 rounded-lg appearance-none cursor-pointer"></div>
+                    </div>
+                    <div><label class="block text-xs font-bold text-gray-600 mb-1">Frase Principal (Topo)</label><input type="text" id="autoThemeText" value="OFERTA IMPERDÍVEL" class="w-full text-sm border-gray-300 rounded border p-2 outline-none uppercase font-bold focus:ring-yellow-500 shadow-sm"></div>
+                    <div><label class="block text-xs font-bold text-gray-600 mb-1">Frase Rodapé (Validade)</label><input type="text" id="autoThemeSecondaryText" value="APROVEITE NOSSAS PROMOÇÕES" class="w-full text-sm border-gray-300 rounded border p-2 outline-none uppercase font-bold focus:ring-yellow-500 shadow-sm"></div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex justify-between items-end border-b pb-2">
+                    <h2 class="text-lg font-bold text-gray-800">2. Produtos</h2>
+                    <button id="clearProductsBtn" class="text-xs text-red-600 hover:text-white hover:bg-red-600 font-bold cursor-pointer border border-red-200 bg-red-50 px-2 py-1 rounded transition">Limpar Produtos</button>
+                </div>
+                
+                <div class="bg-indigo-50 p-3 rounded-md border border-indigo-200 shadow-sm">
+                    <label class="block text-sm font-bold text-indigo-800 mb-2">Tipo de Promoção</label>
+                    <select id="promoType" class="w-full pl-3 pr-10 py-2 text-sm border-indigo-300 rounded-md border shadow-sm font-bold text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                        <option value="normal">1 Preço (Promoção Normal)</option>
+                        <option value="club">2 Preços (Clube de Vantagens)</option>
+                        <option value="from_to">2 Preços (De / Por)</option>
+                    </select>
+                </div>
+
+                <div class="bg-white p-3 rounded-md border border-gray-200 shadow-sm">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Digitar Manualmente</label>
+                    <div class="space-y-2">
+                        <input type="text" id="manualProdName" placeholder="Ex: ARROZ TIPO 1 5KG" class="w-full text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none uppercase">
+                        <div class="flex gap-2">
+                            <input type="text" id="manualProdPriceRegular" placeholder="Preço Normal (Ex: 29,90)" class="w-1/2 text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none hidden">
+                            <input type="text" id="manualProdPrice" placeholder="Preço Promo (Ex: 24,90)" class="w-full text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none transition-all duration-300">
+                        </div>
+                        <button id="addManualBtn" class="w-full mt-2 bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 rounded text-sm shadow transition active:scale-95">Adicionar Produto</button>
+                    </div>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="flex-shrink-0 mx-4 text-gray-400 text-xs font-bold uppercase">OU IMPORTAR EXCEL</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
+
+                <div class="bg-green-50 p-3 rounded-md border border-green-200 shadow-sm">
+                    <label class="block text-sm font-bold text-green-800 mb-1">Importar Planilha (.xlsx, .csv)</label>
+                    <div id="excelInstructions" class="text-[10px] text-green-700 mb-2 bg-green-100 p-1.5 rounded transition-all">
+                        Colunas obrigatórias: <b>1ª Produto</b> | <b>2ª Preço</b>
+                    </div>
+                    <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-green-700 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-green-600 file:text-white hover:file:bg-green-700 cursor-pointer">
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold text-gray-800 border-b pb-2">3. Estilo e Textos</h2>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Fonte Principal (Todas as Letras)</label>
+                    <select id="fontFamily" class="mt-1 block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md border shadow-sm cursor-pointer font-bold">
+                        <optgroup label="Mais Usadas (Varejo)">
+                            <option value="'Anton', sans-serif">Anton (Impacto Máximo)</option>
+                            <option value="'Bebas Neue', sans-serif">Bebas Neue (Alta e Condensada)</option>
+                            <option value="'Fira Sans Extra Condensed', sans-serif">Fira Sans (Super Condensada)</option>
+                            <option value="'Impact', sans-serif">Impact (Padrão e Forte)</option>
+                        </optgroup>
+                        <optgroup label="Estilo Pincel / Promocional">
+                            <option value="'Permanent Marker', cursive">Permanent Marker (Pincel Forte)</option>
+                            <option value="'Chewy', system-ui">Chewy (Arredondada / Fofa)</option>
+                            <option value="'Caveat', cursive">Caveat (Manuscrita / Dinâmica)</option>
+                        </optgroup>
+                        <optgroup label="Padrões e Clássicas">
+                            <option value="'Inter', sans-serif">Inter (Limpa e Moderna)</option>
+                            <option value="'Oswald', sans-serif">Oswald (Clássica Varejo)</option>
+                            <option value="'Roboto', sans-serif">Roboto (Padrão)</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-md border border-gray-200">
+                    <div><label class="block text-[10px] font-bold text-gray-700 mb-1">Cor Produto</label><input type="color" id="prodColor" value="#1f2937" class="h-8 w-full rounded border border-gray-300 cursor-pointer"></div>
+                    <div><label class="block text-[10px] font-bold text-gray-700 mb-1">Cor Preço Principal</label><input type="color" id="priceColor" value="#ef4444" class="h-8 w-full rounded border border-gray-300 cursor-pointer"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1 flex justify-between">Tamanho Prod. <span id="prodFontSizeDisplay" class="text-blue-600">100%</span></label><input type="range" id="prodFontSizeScale" min="50" max="200" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none"></div>
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1 flex justify-between">Tamanho Preço <span id="priceFontSizeDisplay" class="text-blue-600">100%</span></label><input type="range" id="priceFontSizeScale" min="50" max="250" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none"></div>
+                </div>
+
+                <!-- MENU COMPLETO PARA CLUBE DE VANTAGENS / DE POR -->
+                <div id="promoSettings" class="hidden mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-md">
+                    <label class="block text-xs font-bold text-indigo-800 mb-2 border-b border-indigo-200 pb-1">Ajustes Preço Anterior / Clube</label>
+                    
+                    <div id="clubLogoControl" class="hidden mb-3 border-b border-indigo-200 pb-3 mt-2">
+                        <label class="block text-[10px] font-bold text-gray-700 mb-1">Logo do Clube (Substitui Texto)</label>
+                        <input type="file" id="clubLogoUpload" accept="image/*" class="block w-full text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:font-bold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
+                        <button id="clearClubLogoBtn" class="text-[10px] font-bold text-red-500 hover:text-red-700 mt-1 hidden underline">Remover Logo do Clube</button>
+                        
+                        <div class="mt-2">
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">Escala Global do Logo <span id="clubLogoSizeDisplay" class="text-indigo-600">100%</span></label>
+                            <input type="range" id="clubLogoGlobalScale" min="50" max="1000" value="100" class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+
+                    <!-- Campos de Texto do Clube (mantidos editáveis) -->
+                    <div id="clubTextControl" class="hidden grid grid-cols-2 gap-2 mt-2">
+                        <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 1 (Clube)</label><input type="text" id="textClubNormal" value="CLIENTE" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
+                        <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 2 (Clube)</label><input type="text" id="textClubPromo" value="CLUBE" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
+                    </div>
+
+                    <!-- Campos de Texto De/Por -->
+                    <div class="grid grid-cols-2 gap-2 mt-2" id="dePorTextControl">
+                        <div id="textPromo1"><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 1 (Normal)</label><input type="text" id="textPromoDe" value="PREÇO NORMAL R$" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
+                        <div id="textPromo2"><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 2 (Promo)</label><input type="text" id="textPromoPor" value="POR" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 mt-3">
+                        <div><label class="block text-[10px] font-bold text-gray-700 mb-1">Cor Preço Anterior</label><input type="color" id="priceRegularColor" value="#9ca3af" class="h-6 w-full rounded border border-gray-300 cursor-pointer"></div>
+                        <div><label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">Tamanho Ant. <span id="priceRegularSizeDisplay" class="text-indigo-600">100%</span></label><input type="range" id="priceRegularFontSizeScale" min="50" max="250" value="100" class="w-full h-2 bg-indigo-200 rounded-lg appearance-none"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold text-gray-800 border-b pb-2">4. Saída e Layout</h2>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Cartazes por Folha A4</label>
+                    <div class="grid grid-cols-3 gap-2 mt-2">
+                        <button class="layout-btn border-2 border-blue-600 bg-blue-50 text-blue-700 rounded py-2 font-black text-lg" data-layout="1">1</button>
+                        <button class="layout-btn border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 rounded py-2 font-black text-lg" data-layout="2">2</button>
+                        <button class="layout-btn border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 rounded py-2 font-black text-lg" data-layout="4">4</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold text-gray-800 border-b pb-2 flex items-center justify-between">
+                    <span>5. Projetos Salvos</span>
+                    <span id="cloudStatus" class="text-[10px] font-bold bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full border border-yellow-200">Aguardando login...</span>
+                </h2>
+                <button id="newProjectBtn" class="w-full bg-indigo-50 hover:bg-indigo-100 hover:text-white hover:bg-indigo-600 text-indigo-700 font-black py-3 px-4 rounded-lg border border-indigo-200 shadow-sm transition flex justify-center items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg> CRIAR NOVO PROJETO (Limpar)
+                </button>
+                <div class="pt-2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Salvar Campanha Atual</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="projectName" placeholder="Ex: Ofertas de Fim de Mês" class="flex-grow pl-3 pr-3 py-2 text-sm border-gray-300 rounded-md border shadow-inner">
+                        <button id="saveProjectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold shadow-md disabled:opacity-50">Salvar</button>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Histórico da Loja</label>
+                    <ul id="savedProjectsList" class="bg-white border border-gray-200 rounded-md max-h-40 overflow-y-auto divide-y divide-gray-100 text-sm shadow-inner"><li class="p-3 text-gray-500 text-center italic text-xs">Carregando seus projetos...</li></ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t bg-white sticky bottom-0 shrink-0 z-20 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)]">
+            <button id="printBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-black text-sm py-4 px-4 rounded-lg shadow-lg transition-transform transform active:scale-95 flex flex-col justify-center items-center gap-1 border border-green-800">
+                <div class="flex items-center gap-2 text-base">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    IMPRIMIR / GERAR PDF NATIVO
+                </div>
+                <span class="text-[9px] font-normal opacity-90 block mt-1 bg-green-800 px-2 py-0.5 rounded-full">DICA: Na janela, marque "Gráficos de plano de fundo"</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-grow bg-gray-300 overflow-y-auto relative no-print-bg">
+        <div class="absolute inset-0 no-print pointer-events-none opacity-5" style="background-image: radial-gradient(#000 1px, transparent 1px); background-size: 20px 20px;"></div>
+        <div class="p-4 flex justify-between items-center bg-white shadow-sm no-print sticky top-0 z-10 border-b border-gray-200">
+            <h2 class="font-bold text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                Pré-visualização
+            </h2>
+            <div class="text-sm bg-blue-100 text-blue-800 px-4 py-1 rounded-full font-bold border border-blue-200 shadow-sm" id="pageCountDisplay">Páginas: 0</div>
+        </div>
+        <div id="previewContainer" class="preview-container pb-20"></div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDB81varVquhypzkLfbf6bf2RiNX4fcPL4",
+            authDomain: "promoprint-maker.firebaseapp.com",
+            projectId: "promoprint-maker",
+            storageBucket: "promoprint-maker.firebasestorage.app",
+            messagingSenderId: "218054208443",
+            appId: "1:218054208443:web:5e1098858d03609e8bf29e"
+        };
+
+        const appId = 'poster-maker-app';
+        let app, auth, db;
+        let currentUser = null;
+        let currentSessionId = null;
+        let currentProjectId = null; 
+        let loadedProjectName = ""; 
+        let unsubscribeProjects = null;
+        let sessionUnsubscribe = null;
+
+        try { app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app); } catch (e) { console.warn("Erro no Firebase", e); }
+
+        const state = {
+            headerImg: null, footerImg: null, logoImg: null, clubLogoImg: null, products: [], 
+            settings: {
+                themeMode: 'image', posterBgColor: "#ffffff",
+                autoThemeHeaderBg: "#ef4444", autoThemeFooterBg: "#dc2626", autoThemeTextColor: "#fef08a",
+                autoThemeText: "OFERTA IMPERDÍVEL", autoThemeSecondaryText: "APROVEITE NOSSAS PROMOÇÕES",
+                autoTitleScale: 100, autoSubScale: 100, fontFamily: "'Anton', sans-serif",
+                prodColor: "#1f2937", priceColor: "#ef4444", prodFontScale: 100, priceFontScale: 100, layout: 1,
+                logoX: 2, logoY: 2, logoW: 28,
+                promoType: 'normal', priceRegularColor: "#9ca3af", priceRegularFontScale: 100,
+                textPromoDe: "PREÇO NORMAL R$", textPromoPor: "POR",
+                textClubNormal: "CLIENTE", textClubPromo: "CLUBE", clubLogoGlobalScale: 100
             }
+        };
+
+        const els = {
+            loginOverlay: document.getElementById('loginOverlay'), loginForm: document.getElementById('loginForm'),
+            loginEmail: document.getElementById('loginEmail'), loginPassword: document.getElementById('loginPassword'),
+            loginBtn: document.getElementById('loginBtn'), loginError: document.getElementById('loginError'), logoutBtn: document.getElementById('logoutBtn'),
+            headerUpload: document.getElementById('headerUpload'), footerUpload: document.getElementById('footerUpload'),
+            clearHeaderBtn: document.getElementById('clearHeaderBtn'), clearFooterBtn: document.getElementById('clearFooterBtn'),
+            logoUpload: document.getElementById('logoUpload'), clearLogoBtn: document.getElementById('clearLogoBtn'),
+            clubLogoUpload: document.getElementById('clubLogoUpload'), clearClubLogoBtn: document.getElementById('clearClubLogoBtn'), clubLogoGlobalScale: document.getElementById('clubLogoGlobalScale'), clubLogoSizeDisplay: document.getElementById('clubLogoSizeDisplay'),
+            posterBgColor: document.getElementById('posterBgColor'), tabImgBtn: document.getElementById('tabImgBtn'), tabAutoBtn: document.getElementById('tabAutoBtn'), panelImage: document.getElementById('panelImage'), panelAuto: document.getElementById('panelAuto'), presetBtns: document.querySelectorAll('.preset-btn'),
+            autoHeaderBg: document.getElementById('autoHeaderBg'), autoTextColor: document.getElementById('autoTextColor'), autoFooterBg: document.getElementById('autoFooterBg'), autoThemeText: document.getElementById('autoThemeText'), autoThemeSecondaryText: document.getElementById('autoThemeSecondaryText'), autoTitleScale: document.getElementById('autoTitleScale'), autoSubScale: document.getElementById('autoSubScale'), autoTitleSizeDisplay: document.getElementById('autoTitleSizeDisplay'), autoSubSizeDisplay: document.getElementById('autoSubSizeDisplay'), excelUpload: document.getElementById('excelUpload'), excelInstructions: document.getElementById('excelInstructions'),
+            fontFamily: document.getElementById('fontFamily'), prodColor: document.getElementById('prodColor'), priceColor: document.getElementById('priceColor'), prodFontSizeScale: document.getElementById('prodFontSizeScale'), priceFontSizeScale: document.getElementById('priceFontSizeScale'), prodFontSizeDisplay: document.getElementById('prodFontSizeDisplay'), priceFontSizeDisplay: document.getElementById('priceFontSizeDisplay'), layoutBtns: document.querySelectorAll('.layout-btn'),
+            printBtn: document.getElementById('printBtn'), previewContainer: document.getElementById('previewContainer'), pageCountDisplay: document.getElementById('pageCountDisplay'), dynamicPrintStyle: document.getElementById('dynamicPrintStyle'), toastContainer: document.getElementById('toastContainer'),
+            projectName: document.getElementById('projectName'), saveProjectBtn: document.getElementById('saveProjectBtn'), savedProjectsList: document.getElementById('savedProjectsList'), cloudStatus: document.getElementById('cloudStatus'),
+            manualProdName: document.getElementById('manualProdName'), manualProdPrice: document.getElementById('manualProdPrice'), manualProdPriceRegular: document.getElementById('manualProdPriceRegular'), addManualBtn: document.getElementById('addManualBtn'), clearProductsBtn: document.getElementById('clearProductsBtn'), newProjectBtn: document.getElementById('newProjectBtn'),
+            promoType: document.getElementById('promoType'), promoSettings: document.getElementById('promoSettings'), textPromoDe: document.getElementById('textPromoDe'), textPromoPor: document.getElementById('textPromoPor'), priceRegularColor: document.getElementById('priceRegularColor'), priceRegularFontSizeScale: document.getElementById('priceRegularFontSizeScale'), priceRegularSizeDisplay: document.getElementById('priceRegularSizeDisplay'),
+            textPromo1: document.getElementById('textPromo1'), textPromo2: document.getElementById('textPromo2'), clubLogoControl: document.getElementById('clubLogoControl'),
+            textClubNormal: document.getElementById('textClubNormal'), textClubPromo: document.getElementById('textClubPromo'), clubTextControl: document.getElementById('clubTextControl'), dePorTextControl: document.getElementById('dePorTextControl')
+        };
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgColors = { 'success': 'bg-green-600', 'error': 'bg-red-600', 'info': 'bg-blue-600' };
+            toast.className = `${bgColors[type]} text-white px-4 py-3 rounded shadow-lg transition-opacity duration-300 ease-in-out opacity-0 flex items-center justify-between min-w-[250px] font-bold text-sm`;
+            toast.innerHTML = `<span>${message}</span>`;
+            els.toastContainer.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('opacity-0'));
+            setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        function clearAll() {
-            state.products = [];
-            state.autoQueues = { grande: [], medio: [], pequeno: [] };
-            state.isAutoLayout = false;
-            document.getElementById('excelUpload').value = '';
+        if (auth) {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUser = user; els.loginOverlay.classList.add('hidden'); els.logoutBtn.classList.remove('hidden');
+                    els.cloudStatus.textContent = 'Nuvem Conectada'; els.cloudStatus.className = 'text-[10px] font-bold bg-green-100 text-green-800 px-2 py-1 rounded-full border border-green-200';
+                    currentSessionId = crypto.randomUUID(); const sessionRef = doc(db, 'sessions', user.uid);
+                    await setDoc(sessionRef, { sessionId: currentSessionId, lastLogin: serverTimestamp() });
+                    if (sessionUnsubscribe) sessionUnsubscribe();
+                    sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => { if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) { signOut(auth).then(() => { alert("🚨 VOCÊ FOI DESCONECTADO!"); window.location.reload(); }); } });
+                    loadSavedProjects();
+                } else {
+                    currentUser = null; els.loginOverlay.classList.remove('hidden'); els.logoutBtn.classList.add('hidden');
+                    els.savedProjectsList.innerHTML = '<li class="p-3 text-gray-500 text-center italic text-xs">Aguardando login...</li>';
+                    if (sessionUnsubscribe) sessionUnsubscribe();
+                    els.loginBtn.textContent = "Entrar no Sistema"; els.loginBtn.disabled = false; els.loginForm.reset(); els.loginError.classList.add('hidden');
+                }
+            });
+        }
+        
+        els.loginForm.addEventListener('submit', (e) => { e.preventDefault(); els.loginBtn.textContent = "Validando..."; els.loginBtn.disabled = true; signInWithEmailAndPassword(auth, els.loginEmail.value, els.loginPassword.value).catch(err => { els.loginError.textContent = "Dados incorretos ou conta inexistente."; els.loginError.classList.remove('hidden'); els.loginBtn.textContent = "Entrar no Sistema"; els.loginBtn.disabled = false; }); });
+        els.logoutBtn.addEventListener('click', () => { if(confirm("Deseja sair do sistema?")) signOut(auth); });
+
+        function loadSavedProjects() {
+            if (!currentUser) return;
+            const projectsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns');
+            if (unsubscribeProjects) unsubscribeProjects();
+            unsubscribeProjects = onSnapshot(projectsRef, (snapshot) => {
+                els.savedProjectsList.innerHTML = '';
+                if (snapshot.empty) return els.savedProjectsList.innerHTML = '<li class="p-3 text-gray-500 text-center italic">Nenhum cartaz salvo.</li>';
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data(); const li = document.createElement('li');
+                    li.className = 'p-3 flex justify-between items-center hover:bg-gray-50 border-b text-sm transition';
+                    li.innerHTML = `<span class="font-bold text-gray-700 truncate w-1/2">${data.name}</span>`;
+                    const actionsDiv = document.createElement('div'); actionsDiv.className = 'flex gap-2';
+                    const loadBtn = document.createElement('button'); loadBtn.textContent = 'Abrir'; loadBtn.className = 'text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded font-bold border border-blue-200'; loadBtn.onclick = () => loadProjectData(docSnap.id, data);
+                    const delBtn = document.createElement('button'); delBtn.innerHTML = `✕`; delBtn.className = 'text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold border border-red-200'; delBtn.onclick = () => deleteProject(docSnap.id);
+                    actionsDiv.append(loadBtn, delBtn); li.appendChild(actionsDiv); els.savedProjectsList.appendChild(li);
+                });
+            });
+        }
+
+        async function saveCurrentProject() {
+            if (!currentUser) return showToast("Faça login para salvar.", "error");
+            const name = els.projectName.value.trim(); if (!name) return showToast("Dê um nome para sua campanha.", "error");
+            els.saveProjectBtn.disabled = true; els.saveProjectBtn.textContent = 'Salvando...';
+            try {
+                let projectId = currentProjectId; if (currentProjectId && name !== loadedProjectName) projectId = crypto.randomUUID(); else if (!currentProjectId) projectId = crypto.randomUUID();
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', projectId), { name, headerImg: state.headerImg, footerImg: state.footerImg, logoImg: state.logoImg, clubLogoImg: state.clubLogoImg, products: state.products, settings: state.settings, updatedAt: serverTimestamp() });
+                currentProjectId = projectId; loadedProjectName = name; showToast("Campanha salva com sucesso!", "success");
+            } catch (error) { showToast("Erro ao salvar.", "error"); } finally { els.saveProjectBtn.disabled = false; els.saveProjectBtn.textContent = 'Salvar'; }
+        }
+
+        function loadProjectData(id, data) {
+            currentProjectId = id; loadedProjectName = data.name || ''; els.projectName.value = loadedProjectName;
+            state.headerImg = data.headerImg || null; state.footerImg = data.footerImg || null; state.logoImg = data.logoImg || null; state.clubLogoImg = data.clubLogoImg || null; state.products = data.products || [];
+            
+            if(state.logoImg) els.clearLogoBtn.classList.remove('hidden'); else els.clearLogoBtn.classList.add('hidden');
+            if(state.clubLogoImg) els.clearClubLogoBtn.classList.remove('hidden'); else els.clearClubLogoBtn.classList.add('hidden');
+            if(state.headerImg) els.clearHeaderBtn.classList.remove('hidden'); else els.clearHeaderBtn.classList.add('hidden');
+            if(state.footerImg) els.clearFooterBtn.classList.remove('hidden'); else els.clearFooterBtn.classList.add('hidden');
+
+            if (data.settings) state.settings = { ...state.settings, ...data.settings };
+            switchTab(state.settings.themeMode);
+            
+            els.promoType.value = state.settings.promoType || 'normal'; updatePromoUI();
+            els.posterBgColor.value = state.settings.posterBgColor; els.autoHeaderBg.value = state.settings.autoThemeHeaderBg; els.autoTextColor.value = state.settings.autoThemeTextColor; els.autoFooterBg.value = state.settings.autoThemeFooterBg;
+            els.autoThemeText.value = state.settings.autoThemeText; els.autoThemeSecondaryText.value = state.settings.autoThemeSecondaryText; els.autoTitleScale.value = state.settings.autoTitleScale; els.autoSubScale.value = state.settings.autoSubScale;
+            els.autoTitleSizeDisplay.textContent = `${state.settings.autoTitleScale}%`; els.autoSubSizeDisplay.textContent = `${state.settings.autoSubScale}%`;
+            els.fontFamily.value = state.settings.fontFamily; els.prodColor.value = state.settings.prodColor; els.priceColor.value = state.settings.priceColor;
+            els.prodFontSizeScale.value = state.settings.prodFontScale; els.priceFontSizeScale.value = state.settings.priceFontScale;
+            els.prodFontSizeDisplay.textContent = `${state.settings.prodFontScale}%`; els.priceFontSizeDisplay.textContent = `${state.settings.priceFontScale}%`;
+            
+            els.textPromoDe.value = state.settings.textPromoDe || "PREÇO NORMAL R$"; els.textPromoPor.value = state.settings.textPromoPor || "POR";
+            els.textClubNormal.value = state.settings.textClubNormal || "CLIENTE"; els.textClubPromo.value = state.settings.textClubPromo || "CLUBE";
+            els.priceRegularColor.value = state.settings.priceRegularColor || "#9ca3af";
+            els.priceRegularFontSizeScale.value = state.settings.priceRegularFontScale || 100; els.priceRegularSizeDisplay.textContent = `${state.settings.priceRegularFontScale || 100}%`;
+            els.clubLogoGlobalScale.value = state.settings.clubLogoGlobalScale || 100; els.clubLogoSizeDisplay.textContent = `${state.settings.clubLogoGlobalScale || 100}%`;
+
+            els.layoutBtns.forEach(b => {
+                if (parseInt(b.dataset.layout) === state.settings.layout) { b.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.remove('border-gray-300', 'bg-white', 'text-gray-600', 'border'); } 
+                else { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); }
+            });
+            renderPosters(); showToast("Campanha carregada!", "success");
+        }
+
+        async function deleteProject(id) {
+            if (!currentUser) return;
+            if(confirm("Excluir permanentemente?")) { await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', id)); if (currentProjectId === id) { currentProjectId = null; loadedProjectName = ""; els.projectName.value = ''; } showToast("Excluída.", "info"); }
+        }
+
+        let newProjectConfirmTimeout, clearProductsConfirmTimeout;
+        els.newProjectBtn.addEventListener('click', () => {
+            if (els.newProjectBtn.dataset.confirm === 'true') {
+                els.newProjectBtn.dataset.confirm = 'false'; els.newProjectBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg> CRIAR NOVO PROJETO (Limpar Tudo)`; els.newProjectBtn.classList.remove('bg-red-600', 'text-white', 'hover:bg-red-700'); clearTimeout(newProjectConfirmTimeout);
+                
+                currentProjectId = null; loadedProjectName = ""; els.projectName.value = '';
+                state.products = [];
+                state.logoImg = null; els.logoUpload.value = ''; els.clearLogoBtn.classList.add('hidden');
+                state.clubLogoImg = null; els.clubLogoUpload.value = ''; els.clearClubLogoBtn.classList.add('hidden');
+                state.headerImg = null; els.headerUpload.value = ''; els.clearHeaderBtn.classList.add('hidden');
+                state.footerImg = null; els.footerUpload.value = ''; els.clearFooterBtn.classList.add('hidden');
+                
+                els.manualProdName.value = ''; els.manualProdPrice.value = ''; els.manualProdPriceRegular.value = ''; els.excelUpload.value = '';
+                state.settings = { themeMode: 'image', posterBgColor: "#ffffff", autoThemeHeaderBg: "#ef4444", autoThemeFooterBg: "#dc2626", autoThemeTextColor: "#fef08a", autoThemeText: "OFERTA IMPERDÍVEL", autoThemeSecondaryText: "APROVEITE NOSSAS PROMOÇÕES", autoTitleScale: 100, autoSubScale: 100, fontFamily: "'Anton', sans-serif", prodColor: "#1f2937", priceColor: "#ef4444", prodFontScale: 100, priceFontScale: 100, layout: 1, logoX: 2, logoY: 2, logoW: 28, promoType: 'normal', priceRegularColor: "#9ca3af", priceRegularFontScale: 100, textPromoDe: "PREÇO NORMAL R$", textPromoPor: "POR", textClubNormal: "CLIENTE", textClubPromo: "CLUBE", clubLogoGlobalScale: 100 };
+                
+                switchTab('image'); els.promoType.value = 'normal'; updatePromoUI();
+                els.posterBgColor.value = "#ffffff"; els.autoHeaderBg.value = "#ef4444"; els.autoTextColor.value = "#fef08a"; els.autoFooterBg.value = "#dc2626"; els.autoThemeText.value = "OFERTA IMPERDÍVEL"; els.autoThemeSecondaryText.value = "APROVEITE NOSSAS PROMOÇÕES"; els.fontFamily.value = "'Anton', sans-serif"; els.prodColor.value = "#1f2937"; els.priceColor.value = "#ef4444"; els.priceRegularColor.value = "#9ca3af";
+                els.prodFontSizeScale.value = 100; els.priceFontSizeScale.value = 100; els.priceRegularFontSizeScale.value = 100; els.clubLogoGlobalScale.value = 100; els.autoTitleScale.value = 100; els.autoSubScale.value = 100;
+                els.prodFontSizeDisplay.textContent = "100%"; els.priceFontSizeDisplay.textContent = "100%"; els.priceRegularSizeDisplay.textContent = "100%"; els.clubLogoSizeDisplay.textContent = "100%"; els.autoTitleSizeDisplay.textContent = "100%"; els.autoSubSizeDisplay.textContent = "100%";
+                
+                els.layoutBtns.forEach(b => { if (parseInt(b.dataset.layout) === 1) { b.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.remove('border-gray-300', 'bg-white', 'text-gray-600', 'border'); } else { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); } });
+                renderPosters(); showToast("Novo projeto iniciado!", "success");
+            } else {
+                els.newProjectBtn.dataset.confirm = 'true'; els.newProjectBtn.innerHTML = `TEM CERTEZA? (CLIQUE DE NOVO)`; els.newProjectBtn.classList.add('bg-red-600', 'text-white', 'hover:bg-red-700');
+                newProjectConfirmTimeout = setTimeout(() => { els.newProjectBtn.dataset.confirm = 'false'; els.newProjectBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg> CRIAR NOVO PROJETO (Limpar Tudo)`; els.newProjectBtn.classList.remove('bg-red-600', 'text-white', 'hover:bg-red-700'); }, 3000);
+            }
+        });
+
+        els.clearProductsBtn.addEventListener('click', () => {
+            if(state.products.length === 0) return;
+            if (els.clearProductsBtn.dataset.confirm === 'true') {
+                els.clearProductsBtn.dataset.confirm = 'false'; els.clearProductsBtn.textContent = 'Limpar Produtos'; els.clearProductsBtn.classList.remove('bg-red-600', 'text-white'); els.clearProductsBtn.classList.add('bg-red-50', 'text-red-600'); clearTimeout(clearProductsConfirmTimeout);
+                state.products = []; renderPosters(); showToast("Lista limpa!", "success");
+            } else {
+                els.clearProductsBtn.dataset.confirm = 'true'; els.clearProductsBtn.textContent = 'TEM CERTEZA?'; els.clearProductsBtn.classList.remove('bg-red-50', 'text-red-600'); els.clearProductsBtn.classList.add('bg-red-600', 'text-white');
+                clearProductsConfirmTimeout = setTimeout(() => { els.clearProductsBtn.dataset.confirm = 'false'; els.clearProductsBtn.textContent = 'Limpar Produtos'; els.clearProductsBtn.classList.remove('bg-red-600', 'text-white'); els.clearProductsBtn.classList.add('bg-red-50', 'text-red-600'); }, 3000);
+            }
+        });
+
+        function switchTab(mode) {
+            state.settings.themeMode = mode;
+            if (mode === 'image') { els.tabImgBtn.classList.replace('bg-white', 'bg-blue-50'); els.tabImgBtn.classList.replace('text-gray-700', 'text-blue-700'); els.tabAutoBtn.classList.replace('bg-blue-50', 'bg-white'); els.tabAutoBtn.classList.replace('text-blue-700', 'text-gray-700'); els.panelImage.classList.remove('hidden'); els.panelAuto.classList.add('hidden'); }
+            else { els.tabAutoBtn.classList.replace('bg-white', 'bg-blue-50'); els.tabAutoBtn.classList.replace('text-gray-700', 'text-blue-700'); els.tabImgBtn.classList.replace('bg-blue-50', 'bg-white'); els.tabImgBtn.classList.replace('text-blue-700', 'text-gray-700'); els.panelAuto.classList.remove('hidden'); els.panelImage.classList.add('hidden'); }
             renderPosters();
         }
+        els.tabImgBtn.addEventListener('click', () => switchTab('image')); els.tabAutoBtn.addEventListener('click', () => switchTab('auto'));
 
-        // Lógica de Redimensionamento e Arraste Manual
-        let isResizing = false;
-        let currentHandle = null;
-        let startY = 0;
-        let startFontSize = 0;
+        function updatePromoUI() {
+            const type = els.promoType.value; state.settings.promoType = type;
+            if (type === 'normal') {
+                els.manualProdPriceRegular.classList.add('hidden'); els.manualProdPrice.classList.replace('w-1/2', 'w-full'); els.promoSettings.classList.add('hidden');
+                els.excelInstructions.innerHTML = 'Colunas obrigatórias: <b>1ª Produto</b> | <b>2ª Preço</b>';
+            } else {
+                els.manualProdPriceRegular.classList.remove('hidden'); els.manualProdPrice.classList.replace('w-full', 'w-1/2'); els.promoSettings.classList.remove('hidden');
+                els.excelInstructions.innerHTML = 'Obrigatórias: <b>1ª Prod</b> | <b>2ª Preço Normal/De</b> | <b>3ª Preço Promo</b>';
+                if (type === 'club') { 
+                    els.dePorTextControl.classList.add('hidden'); 
+                    els.clubLogoControl.classList.remove('hidden'); 
+                    els.clubTextControl.classList.remove('hidden'); 
+                } else { 
+                    els.dePorTextControl.classList.remove('hidden'); 
+                    els.clubLogoControl.classList.add('hidden'); 
+                    els.clubTextControl.classList.add('hidden'); 
+                }
+            }
+            renderPosters();
+        }
+        els.promoType.addEventListener('change', updatePromoUI);
+
+        function formatPrice(val) {
+            if (val === undefined || val === null) return "0,00";
+            if (typeof val === 'number') return val.toFixed(2).replace('.', ',');
+            let strVal = String(val).trim(); if (strVal.includes(',')) return strVal; if (strVal.includes('.')) return strVal.replace('.', ','); return strVal;
+        }
+        function splitPrice(priceStr) { const parts = priceStr.split(','); return { intPart: parts[0] || "0", decPart: parts[1] ? "," + parts[1].substring(0,2) : ",00" }; }
+
+        function handleImageUpload(e, stateKey) {
+            const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas'); let width = img.width, height = img.height; const MAX_WIDTH = (stateKey === 'logoImg' || stateKey === 'clubLogoImg') ? 1000 : 2480; 
+                    if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+                    canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d');
+                    if(stateKey !== 'logoImg' && stateKey !== 'clubLogoImg') { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, width, height); }
+                    ctx.drawImage(img, 0, 0, width, height);
+                    state[stateKey] = canvas.toDataURL((stateKey === 'logoImg' || stateKey === 'clubLogoImg') ? 'image/png' : 'image/jpeg', 0.75);
+                    if(stateKey === 'logoImg') els.clearLogoBtn.classList.remove('hidden');
+                    if(stateKey === 'clubLogoImg') els.clearClubLogoBtn.classList.remove('hidden');
+                    if(stateKey === 'headerImg') els.clearHeaderBtn.classList.remove('hidden');
+                    if(stateKey === 'footerImg') els.clearFooterBtn.classList.remove('hidden');
+                    renderPosters();
+                }; img.src = event.target.result;
+            }; reader.readAsDataURL(file);
+        }
+
+        function handleExcelUpload(e) {
+            const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
+            reader.onload = (event) => {
+                const data = new Uint8Array(event.target.result); const workbook = XLSX.read(data, {type: 'array'}); const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 }); const parsedProducts = [];
+                for (let i = 1; i < json.length; i++) {
+                    const row = json[i]; 
+                    if (row && row[0] && row[1]) {
+                        parsedProducts.push({ 
+                            name: String(row[0]).trim(), price: formatPrice(row[1]), priceRegular: row[2] ? formatPrice(row[2]) : "",
+                            nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 }
+                        });
+                    }
+                }
+                if (parsedProducts.length > 0) { state.products = state.products.concat(parsedProducts); renderPosters(); showToast(`${parsedProducts.length} produtos importados!`, "success"); } else showToast("Nenhum produto válido encontrado.", "error");
+                e.target.value = ''; 
+            }; reader.readAsArrayBuffer(file);
+        }
+
+        function renderPosters() {
+            els.previewContainer.innerHTML = ''; const s = state.settings; const root = document.documentElement;
+            root.style.setProperty('--font-family', s.fontFamily); root.style.setProperty('--prod-color', s.prodColor); root.style.setProperty('--price-color', s.priceColor);
+            root.style.setProperty('--poster-bg', s.posterBgColor); root.style.setProperty('--logo-x', `${s.logoX}%`); root.style.setProperty('--logo-y', `${s.logoY}%`); root.style.setProperty('--logo-w', `${s.logoW}%`);
+            
+            let headerHTML = ''; let footerHTML = '';
+            const logoHTML = state.logoImg ? `<div class="logo-container"><img src="${state.logoImg}" class="poster-logo" alt="Logo"><div class="resize-handle"></div></div>` : '';
+
+            let pBase, prBase, tBase, sBase;
+            if (s.layout === 1) { pBase = 4.0; prBase = 12.0; tBase = 4.5; sBase = 2.0; } 
+            else if (s.layout === 2) { pBase = 3.0; prBase = 8.5; tBase = 3.0; sBase = 1.3; } 
+            else { pBase = 2.0; prBase = 5.5; tBase = 2.0; sBase = 1.0; }
+
+            pBase *= (s.prodFontScale / 100); prBase *= (s.priceFontScale / 100); tBase *= (s.autoTitleScale / 100); sBase *= (s.autoSubScale / 100);
+
+            if (s.themeMode === 'image') {
+                headerHTML = state.headerImg ? `<img src="${state.headerImg}" class="poster-header" alt="Cabeçalho">` : '';
+                footerHTML = state.footerImg ? `<img src="${state.footerImg}" class="poster-footer" alt="Rodapé">` : '';
+            } else {
+                headerHTML = `<div class="poster-header-auto" style="background-color: ${s.autoThemeHeaderBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${tBase}rem;">${s.autoThemeText}</span></div>`;
+                footerHTML = `<div class="poster-footer-auto" style="background-color: ${s.autoThemeFooterBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${sBase}rem;">${s.autoThemeSecondaryText}</span></div>`;
+            }
+
+            if (state.products.length === 0) {
+                els.pageCountDisplay.textContent = `Páginas: 0`; els.dynamicPrintStyle.innerHTML = "@page { size: A4 portrait; margin: 0; }";
+                els.previewContainer.innerHTML = `<div class="a4-page layout-1"><div class="poster">${logoHTML}${headerHTML}<div class="poster-body text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg><p class="font-bold text-xl mb-1">Vazio</p></div>${footerHTML}</div></div>`;
+                return;
+            }
+
+            els.dynamicPrintStyle.innerHTML = s.layout === 2 ? "@page { size: A4 landscape; margin: 0; }" : "@page { size: A4 portrait; margin: 0; }";
+            
+            const pages = []; for (let i = 0; i < state.products.length; i += s.layout) pages.push(state.products.slice(i, i + s.layout));
+            els.pageCountDisplay.textContent = `Páginas: ${pages.length}`;
+
+            let globalIndex = 0;
+            pages.forEach((pageItems) => {
+                const pageDiv = document.createElement('div'); pageDiv.className = `a4-page layout-${s.layout}`;
+                pageItems.forEach((prod) => {
+                    // Prevenção inteligente (assegurando que todas as transformações existam)
+                    if (!prod.nameTransform) prod.nameTransform = { x: 0, y: 0, scale: 1 }; 
+                    if (!prod.priceTransform) prod.priceTransform = { x: 0, y: 0, scale: 1 }; 
+                    if (!prod.priceRegularTransform) prod.priceRegularTransform = { x: 0, y: 0, scale: 1 };
+                    if (!prod.prefixTransform) prod.prefixTransform = { x: 0, y: 0, scale: 1 };
+                    
+                    const nameSize = pBase * prod.nameTransform.scale; 
+                    const priceSize = prBase * prod.priceTransform.scale; 
+                    const priceF = splitPrice(prod.price);
+                    
+                    let priceRegularHTML = ''; 
+                    let prefixHTML = '';
+                    
+                    // Lógica para Blocos Independentes: Clube / De Por
+                    if (s.promoType === 'club' || s.promoType === 'from_to') {
+                        const textTop = s.promoType === 'club' ? s.textClubNormal : s.textPromoDe;
+                        const textBottom = s.promoType === 'club' ? s.textClubPromo : s.textPromoPor;
+                        
+                        const prRegSize = (prBase * 0.40) * (s.priceRegularFontScale / 100) * prod.priceRegularTransform.scale;
+                        const prefixSize = (prBase * 0.40) * prod.prefixTransform.scale;
+                        
+                        // BLOCO 1: Preço Normal (De ou Cliente)
+                        priceRegularHTML = `
+                            <div class="editable-element" data-index="${globalIndex}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${prRegSize}rem; color: ${s.priceRegularColor}; text-align: center; width: 100%; font-weight: 900; line-height: 1; text-transform: uppercase;">
+                                <div style="margin-bottom: 2px;">${textTop}</div>
+                                <div>R$ ${prod.priceRegular}</div>
+                                <div class="element-resize-handle no-print"></div>
+                            </div>
+                        `;
+                        
+                        // BLOCO 2: Prefixo (Logo Clube ou Texto Por/Clube)
+                        let clubLogoEl = '';
+                        if (s.promoType === 'club' && state.clubLogoImg) {
+                            const logoW = 100 * (s.clubLogoGlobalScale / 100);
+                            clubLogoEl = `<img src="${state.clubLogoImg}" style="width: ${logoW}%; height: auto; object-fit: contain;">`;
+                        } else { 
+                            clubLogoEl = `<div style="font-weight: 900; line-height: 1; text-transform: uppercase;">${textBottom}</div>`; 
+                        }
+
+                        prefixHTML = `
+                            <div class="editable-element" data-index="${globalIndex}" data-type="prefix" style="transform: translate(${prod.prefixTransform.x}px, ${prod.prefixTransform.y}px); font-size: ${prefixSize}rem; color: ${s.priceColor}; text-align: center; width: 100%; margin-top: 10px; margin-bottom: 4px; display: flex; justify-content: center; font-weight: 900;">
+                                ${clubLogoEl}
+                                <div class="element-resize-handle no-print"></div>
+                            </div>
+                        `;
+                    }
+
+                    // BLOCO PRINCIPAL INQUEBRÁVEL - Bold Forçado (900)
+                    pageDiv.innerHTML += `<div class="poster">${logoHTML}${headerHTML}
+                        <div class="poster-body" style="padding: 2%;">
+                            
+                            <div class="product-name editable-element" data-index="${globalIndex}" data-type="name" style="transform: translate(${prod.nameTransform.x}px, ${prod.nameTransform.y}px); font-size: ${nameSize}rem; font-weight: 900;">
+                                ${prod.name}
+                                <div class="element-resize-handle no-print"></div>
+                            </div>
+                            
+                            ${priceRegularHTML}
+                            ${prefixHTML}
+                            
+                            <div class="product-price editable-element" data-index="${globalIndex}" data-type="price" style="transform: translate(${prod.priceTransform.x}px, ${prod.priceTransform.y}px); font-size: ${priceSize}rem; color: ${s.priceColor}; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <table style="border-collapse: collapse; margin: 0 auto; line-height: 0.8;">
+                                    <tr>
+                                        <td style="vertical-align: top; font-size: 0.4em; font-weight: 900; padding-top: 0.15em; padding-right: 2px;">R$</td>
+                                        <td style="vertical-align: top; font-weight: 900; letter-spacing: -0.02em;">${priceF.intPart}</td>
+                                        <td style="vertical-align: top; font-size: 0.5em; font-weight: 900; padding-top: 0.1em;">${priceF.decPart}</td>
+                                    </tr>
+                                </table>
+                                <div class="element-resize-handle no-print"></div>
+                            </div>
+                        </div>${footerHTML}</div>`;
+                    globalIndex++;
+                });
+                for (let j = 0; j < s.layout - pageItems.length; j++) pageDiv.innerHTML += `<div class="poster flex items-center justify-center opacity-30"></div>`;
+                els.previewContainer.appendChild(pageDiv);
+            });
+        }
+
+        let isDraggingLogo = false, isResizingLogo = false, startMouseX, startMouseY, startLogoX, startLogoY, startLogoW, activePoster = null;
+        let isDraggingElement = false, isResizingElement = false, activeElIndex = -1, activeElType = null, activeDomElement = null, startElX, startElY, startElScale;
 
         document.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('resize-handle')) {
-                isResizing = true;
-                currentHandle = e.target;
-                startY = e.clientY;
-                
-                let targetElement = currentHandle.previousElementSibling || currentHandle.parentElement;
-                
-                // Se o handle estiver dentro de um bloco com tabela, queremos escalar a tabela
-                let tableElement = currentHandle.parentElement.querySelector('.price-table');
-                let textElement = currentHandle.parentElement.querySelector('.text-heavy');
-                let imgElement = currentHandle.parentElement.querySelector('img');
-
-                if (tableElement) {
-                     startFontSize = parseFloat(window.getComputedStyle(tableElement).fontSize);
-                     currentHandle.dataset.targetType = 'table';
-                } else if (imgElement) {
-                     startFontSize = parseFloat(window.getComputedStyle(imgElement).width);
-                     currentHandle.dataset.targetType = 'img';
-                } else {
-                     startFontSize = parseFloat(window.getComputedStyle(targetElement).fontSize);
-                     currentHandle.dataset.targetType = 'text';
-                }
-                
-                e.preventDefault();
-            }
+            const elResizeHandle = e.target.closest('.element-resize-handle'); const editableEl = e.target.closest('.editable-element');
+            if (elResizeHandle) { isResizingElement = true; activeDomElement = editableEl; activeElIndex = parseInt(editableEl.dataset.index); activeElType = editableEl.dataset.type; startMouseX = e.clientX; startElScale = state.products[activeElIndex][activeElType + 'Transform'].scale; e.preventDefault(); e.stopPropagation(); return; } 
+            else if (editableEl) { isDraggingElement = true; activeDomElement = editableEl; activeElIndex = parseInt(editableEl.dataset.index); activeElType = editableEl.dataset.type; startMouseX = e.clientX; startMouseY = e.clientY; startElX = state.products[activeElIndex][activeElType + 'Transform'].x; startElY = state.products[activeElIndex][activeElType + 'Transform'].y; e.preventDefault(); return; }
+            if (!state.logoImg) return;
+            if (e.target.classList.contains('resize-handle')) { isResizingLogo = true; activePoster = e.target.closest('.poster'); startMouseX = e.clientX; startLogoW = state.settings.logoW; e.preventDefault(); } 
+            else if (e.target.closest('.logo-container')) { isDraggingLogo = true; activePoster = e.target.closest('.poster'); startMouseX = e.clientX; startMouseY = e.clientY; startLogoX = state.settings.logoX; startLogoY = state.settings.logoY; e.preventDefault(); }
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (!isResizing || !currentHandle) return;
-            const dy = e.clientY - startY;
-            const newSize = Math.max(10, startFontSize + dy); // Limite mínimo
-            
-            let parent = currentHandle.parentElement;
-            let type = currentHandle.dataset.targetType;
-
-            if (type === 'table') {
-                let table = parent.querySelector('.price-table');
-                if (table) table.style.fontSize = `${newSize}px`;
-            } else if (type === 'img') {
-                let img = parent.querySelector('img');
-                if (img) img.style.width = `${newSize}px`;
-            } else {
-                parent.style.fontSize = `${newSize}px`;
+            if (isDraggingElement && activeDomElement) {
+                const newX = startElX + (e.clientX - startMouseX); const newY = startElY + (e.clientY - startMouseY);
+                state.products[activeElIndex][activeElType + 'Transform'].x = newX; state.products[activeElIndex][activeElType + 'Transform'].y = newY;
+                activeDomElement.style.transform = `translate(${newX}px, ${newY}px)`; return;
             }
+            if (isResizingElement && activeDomElement) {
+                let newScale = startElScale + ((e.clientX - startMouseX) / 100); if (newScale < 0.2) newScale = 0.2; if (newScale > 4.0) newScale = 4.0;
+                state.products[activeElIndex][activeElType + 'Transform'].scale = newScale;
+                const s = state.settings; let pBase, prBase;
+                if (s.layout === 1) { pBase = 4.0; prBase = 12.0; } else if (s.layout === 2) { pBase = 3.0; prBase = 8.5; } else { pBase = 2.0; prBase = 5.5; }
+                pBase *= (s.prodFontScale / 100); prBase *= (s.priceFontScale / 100);
+                
+                let baseSize;
+                if (activeElType === 'name') baseSize = pBase;
+                else if (activeElType === 'priceRegular') baseSize = prBase * 0.40 * (s.priceRegularFontScale / 100);
+                else if (activeElType === 'prefix') baseSize = prBase * 0.40;
+                else baseSize = prBase;
+                
+                activeDomElement.style.fontSize = `${baseSize * newScale}rem`; return;
+            }
+            if (!isDraggingLogo && !isResizingLogo) return;
+            const posterRect = activePoster.getBoundingClientRect();
+            if (isDraggingLogo) { const newX = startLogoX + (((e.clientX - startMouseX) / posterRect.width) * 100); const newY = startLogoY + (((e.clientY - startMouseY) / posterRect.height) * 100); state.settings.logoX = newX; state.settings.logoY = newY; document.documentElement.style.setProperty('--logo-x', `${newX}%`); document.documentElement.style.setProperty('--logo-y', `${newY}%`); }
+            if (isResizingLogo) { let newW = startLogoW + (((e.clientX - startMouseX) / posterRect.width) * 100); if (newW < 5) newW = 100; if (newW > 100) newW = 100; state.settings.logoW = newW; document.documentElement.style.setProperty('--logo-w', `${newW}%`); }
+        });
+        
+        document.addEventListener('mouseup', () => { isDraggingLogo = false; isResizingLogo = false; activePoster = null; isDraggingElement = false; isResizingElement = false; activeDomElement = null; });
+
+        els.addManualBtn.addEventListener('click', () => {
+            const name = els.manualProdName.value.trim(), price = els.manualProdPrice.value.trim(), priceReg = els.manualProdPriceRegular.value.trim();
+            if (!name || !price) return showToast("Preencha nome e preço principal.", "error");
+            state.products.push({ name: name.toUpperCase(), price: formatPrice(price), priceRegular: formatPrice(priceReg), nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 } });
+            els.manualProdName.value = ''; els.manualProdPrice.value = ''; els.manualProdPriceRegular.value = ''; els.manualProdName.focus(); renderPosters(); showToast("Inserido!", "success");
         });
 
-        document.addEventListener('mouseup', () => {
-            isResizing = false;
-            currentHandle = null;
-        });
+        els.clearLogoBtn.addEventListener('click', () => { state.logoImg = null; els.logoUpload.value = ''; els.clearLogoBtn.classList.add('hidden'); renderPosters(); });
+        els.clearClubLogoBtn.addEventListener('click', () => { state.clubLogoImg = null; els.clubLogoUpload.value = ''; els.clearClubLogoBtn.classList.add('hidden'); renderPosters(); });
+        els.clearHeaderBtn.addEventListener('click', () => { state.headerImg = null; els.headerUpload.value = ''; els.clearHeaderBtn.classList.add('hidden'); renderPosters(); });
+        els.clearFooterBtn.addEventListener('click', () => { state.footerImg = null; els.footerUpload.value = ''; els.clearFooterBtn.classList.add('hidden'); renderPosters(); });
 
+        els.headerUpload.addEventListener('change', (e) => handleImageUpload(e, 'headerImg')); els.footerUpload.addEventListener('change', (e) => handleImageUpload(e, 'footerImg')); els.logoUpload.addEventListener('change', (e) => handleImageUpload(e, 'logoImg')); els.clubLogoUpload.addEventListener('change', (e) => handleImageUpload(e, 'clubLogoImg')); els.excelUpload.addEventListener('change', handleExcelUpload);
+        els.posterBgColor.addEventListener('input', (e) => { state.settings.posterBgColor = e.target.value; renderPosters(); });
+        els.autoHeaderBg.addEventListener('input', (e) => { state.settings.autoThemeHeaderBg = e.target.value; renderPosters(); }); els.autoTextColor.addEventListener('input', (e) => { state.settings.autoThemeTextColor = e.target.value; renderPosters(); }); els.autoFooterBg.addEventListener('input', (e) => { state.settings.autoThemeFooterBg = e.target.value; renderPosters(); });
+        els.autoThemeText.addEventListener('input', (e) => { state.settings.autoThemeText = e.target.value.toUpperCase(); renderPosters(); }); els.autoThemeSecondaryText.addEventListener('input', (e) => { state.settings.autoThemeSecondaryText = e.target.value.toUpperCase(); renderPosters(); });
+        els.presetBtns.forEach(btn => { btn.addEventListener('click', (e) => { const bg = e.target.dataset.bg, text = e.target.dataset.text, foot = e.target.dataset.foot; state.settings.autoThemeHeaderBg = bg; state.settings.autoThemeTextColor = text; state.settings.autoThemeFooterBg = foot; els.autoHeaderBg.value = bg; els.autoTextColor.value = text; els.autoFooterBg.value = foot; renderPosters(); }); });
+        
+        els.fontFamily.addEventListener('change', (e) => { state.settings.fontFamily = e.target.value; renderPosters(); });
+        els.prodColor.addEventListener('input', (e) => { state.settings.prodColor = e.target.value; renderPosters(); }); els.priceColor.addEventListener('input', (e) => { state.settings.priceColor = e.target.value; renderPosters(); }); els.priceRegularColor.addEventListener('input', (e) => { state.settings.priceRegularColor = e.target.value; renderPosters(); });
+        els.prodFontSizeScale.addEventListener('input', (e) => { state.settings.prodFontScale = parseInt(e.target.value); els.prodFontSizeDisplay.textContent = `${state.settings.prodFontScale}%`; renderPosters(); }); els.priceFontSizeScale.addEventListener('input', (e) => { state.settings.priceFontScale = parseInt(e.target.value); els.priceFontSizeDisplay.textContent = `${state.settings.priceFontScale}%`; renderPosters(); }); els.priceRegularFontSizeScale.addEventListener('input', (e) => { state.settings.priceRegularFontScale = parseInt(e.target.value); els.priceRegularSizeDisplay.textContent = `${state.settings.priceRegularFontScale}%`; renderPosters(); });
+        els.autoTitleScale.addEventListener('input', (e) => { state.settings.autoTitleScale = parseInt(e.target.value); els.autoTitleSizeDisplay.textContent = `${state.settings.autoTitleScale}%`; renderPosters(); }); els.autoSubScale.addEventListener('input', (e) => { state.settings.autoSubScale = parseInt(e.target.value); els.autoSubSizeDisplay.textContent = `${state.settings.autoSubScale}%`; renderPosters(); });
+        els.clubLogoGlobalScale.addEventListener('input', (e) => { state.settings.clubLogoGlobalScale = parseInt(e.target.value); els.clubLogoSizeDisplay.textContent = `${state.settings.clubLogoGlobalScale}%`; renderPosters(); });
+        
+        els.textPromoDe.addEventListener('input', (e) => { state.settings.textPromoDe = e.target.value.toUpperCase(); renderPosters(); }); els.textPromoPor.addEventListener('input', (e) => { state.settings.textPromoPor = e.target.value.toUpperCase(); renderPosters(); });
+        els.textClubNormal.addEventListener('input', (e) => { state.settings.textClubNormal = e.target.value.toUpperCase(); renderPosters(); }); 
+        els.textClubPromo.addEventListener('input', (e) => { state.settings.textClubPromo = e.target.value.toUpperCase(); renderPosters(); });
+        
+        els.layoutBtns.forEach(btn => { btn.addEventListener('click', (e) => { els.layoutBtns.forEach(b => { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); }); e.currentTarget.classList.remove('border-gray-300', 'bg-white', 'text-gray-600', 'border'); e.currentTarget.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); state.settings.layout = parseInt(e.currentTarget.dataset.layout); renderPosters(); }); });
+        
+        els.saveProjectBtn.addEventListener('click', saveCurrentProject);
+        els.printBtn.addEventListener('click', () => { if(state.products.length === 0) return showToast("Adicione produtos antes de imprimir!", "error"); window.print(); });
+
+        window.addEventListener('DOMContentLoaded', () => { updatePromoUI(); renderPosters(); });
     </script>
 </body>
 </html>

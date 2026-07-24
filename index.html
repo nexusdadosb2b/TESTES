@@ -10,7 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <!-- Fontes do Google -->
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;700;900&family=Oswald:wght@400;700&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Caveat:wght@700&family=Chewy&family=Fira+Sans+Extra+Condensed:wght@900&family=Inter:wght@400;700;900&family=Oswald:wght@400;700&family=Permanent+Marker&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -168,6 +168,7 @@
             box-sizing: border-box;
             overflow: visible; 
             z-index: 5;
+            font-weight: 900; /* FORÇA TUDO A SER BOLD NA RAIZ */
         }
 
         .product-name, .product-price {
@@ -469,8 +470,13 @@
                     <select id="fontFamily" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md border shadow-sm cursor-pointer font-bold">
                         <option value="'Inter', sans-serif">Inter (Padrão e Limpa)</option>
                         <option value="'Anton', sans-serif">Anton (Impacto / Grossa)</option>
-                        <option value="'Oswald', sans-serif">Oswald (Condensada / Alta)</option>
+                        <option value="'Bebas Neue', sans-serif">Bebas Neue (Alta / Impacto)</option>
+                        <option value="'Fira Sans Extra Condensed', sans-serif">Fira Sans (Condensada Forte)</option>
+                        <option value="'Oswald', sans-serif">Oswald (Condensada)</option>
                         <option value="'Roboto', sans-serif">Roboto (Clássica)</option>
+                        <option value="'Permanent Marker', cursive">Permanent Marker (Pincel / Estilo à mão)</option>
+                        <option value="'Chewy', cursive">Chewy (Divertida / Arredondada)</option>
+                        <option value="'Caveat', cursive">Caveat (Manuscrita Legível)</option>
                     </select>
                 </div>
 
@@ -540,7 +546,7 @@
                             <label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">
                                 Tamanho Global do Logo <span id="clubLogoScaleDisplay" class="text-indigo-600">100%</span>
                             </label>
-                            <input type="range" id="clubLogoScale" min="20" max="300" value="100" class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer">
+                            <input type="range" id="clubLogoScale" min="20" max="1000" value="100" class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer">
                         </div>
 
                         <button id="clearClubLogoBtn" class="text-[10px] font-bold text-red-500 hover:text-red-700 mt-1 hidden underline">Remover Logo do Clube</button>
@@ -1050,11 +1056,11 @@
                         const textTop = s.promoType === 'club' ? s.textClubNormal : s.textPromoDe;
                         const textBottom = s.promoType === 'club' ? s.textClubPromo : s.textPromoPor;
                         
-                        // Sem risco no preço normal.
+                        // Sem risco no preço normal. Adicionado font-weight: 900 em tudo para garantir que NUNCA fique fino
                         if (prod.priceRegular) {
                             secondaryPriceHTML = `
-                            <div class="editable-element" data-index="${globalIndex}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${priceRegSize}rem; color: ${s.priceRegColor}; line-height: 1.1; margin-bottom: 10px; z-index: 10;">
-                                <div style="font-size: 0.5em; text-align: center; margin-bottom: 2px;">${textTop}</div>
+                            <div class="editable-element" data-index="${globalIndex}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${priceRegSize}rem; color: ${s.priceRegColor}; line-height: 1.1; margin-bottom: 10px; z-index: 10; font-weight: 900;">
+                                <div style="font-size: 0.5em; text-align: center; margin-bottom: 2px; font-weight: 900;">${textTop}</div>
                                 <div style="text-align: center; font-weight: 900;">R$ ${prod.priceRegular}</div>
                                 <div class="element-resize-handle no-print"></div>
                             </div>`;
@@ -1070,11 +1076,11 @@
                             </div>`;
                             mainPricePrefix = ''; 
                         } else {
-                            mainPricePrefix = `<div style="font-size: 0.4em; text-align: center; margin-bottom: 2px; line-height: 1;">${textBottom}</div>`;
+                            mainPricePrefix = `<div style="font-size: 0.4em; text-align: center; margin-bottom: 2px; line-height: 1; font-weight: 900;">${textBottom}</div>`;
                         }
                     }
 
-                    // TABELA INFALÍVEL - Impede R$ Flutuante
+                    // TABELA INFALÍVEL - Impede R$ Flutuante e Adiciona Peso Máximo nas Fontes
                     pageDiv.innerHTML += `
                     <div class="poster">${logoHTML}${headerHTML}
                         <div class="poster-body">
@@ -1086,13 +1092,13 @@
                             ${secondaryPriceHTML}
                             ${clubLogoHTML}
                             
-                            <div class="product-price editable-element" data-index="${globalIndex}" data-type="price" style="transform: translate(${prod.priceTransform.x}px, ${prod.priceTransform.y}px); font-size: ${priceSize}rem;">
+                            <div class="product-price editable-element" data-index="${globalIndex}" data-type="price" style="transform: translate(${prod.priceTransform.x}px, ${prod.priceTransform.y}px); font-size: ${priceSize}rem; font-weight: 900;">
                                 ${mainPricePrefix}
-                                <table style="margin: 0 auto; border-collapse: collapse;">
+                                <table style="margin: 0 auto; border-collapse: collapse; font-weight: 900;">
                                     <tr>
-                                        <td style="vertical-align: top; padding-top: 0.15em; padding-right: 0.05em; font-size: 0.4em; text-align: right;">R$</td>
-                                        <td style="vertical-align: top; line-height: 0.75; text-align: center;">${priceF.intPart}</td>
-                                        <td style="vertical-align: top; padding-top: 0.15em; font-size: 0.5em; text-align: left;">${priceF.decPart}</td>
+                                        <td style="vertical-align: top; padding-top: 0.15em; padding-right: 0.05em; font-size: 0.4em; text-align: right; font-weight: 900;">R$</td>
+                                        <td style="vertical-align: top; line-height: 0.75; text-align: center; font-weight: 900;">${priceF.intPart}</td>
+                                        <td style="vertical-align: top; padding-top: 0.15em; font-size: 0.5em; text-align: left; font-weight: 900;">${priceF.decPart}</td>
                                     </tr>
                                 </table>
                                 <div class="element-resize-handle no-print"></div>

@@ -836,15 +836,15 @@
                     let prefixHTML = '';
                     
                     if (s.promoType === 'club' || s.promoType === 'from_to') {
-                        const textTop = s.promoType === 'club' ? s.textClubNormal : s.textPromoDe;
-                        const textBottom = s.promoType === 'club' ? s.textClubPromo : s.textPromoPor;
+                        const textTop = (s.promoType === 'club' ? s.textClubNormal : s.textPromoDe) || '';
+                        const textBottom = (s.promoType === 'club' ? s.textClubPromo : s.textPromoPor) || '';
                         
                         const prRegSize = (prBase * 0.40) * (s.priceRegularFontScale / 100) * prod.priceRegularTransform.scale;
                         const prefixSize = (prBase * 0.40) * prod.prefixTransform.scale;
                         
                         priceRegularHTML = `
-                            <div class="editable-element" data-index="${oIdx}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${prRegSize}rem; color: ${s.priceRegularColor}; text-align: center; width: 100%; font-weight: 900; line-height: 1; text-transform: uppercase;">
-                                <div style="margin-bottom: 2px;">${textTop}</div>
+                            <div class="editable-element" data-index="${oIdx}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${prRegSize}rem; color: ${s.priceRegularColor}; text-align: center; width: 100%; font-weight: 900; line-height: 0.9; text-transform: uppercase;">
+                                ${textTop.trim() !== '' ? `<div style="margin-bottom: 0px;">${textTop}</div>` : ''}
                                 <div>R$ ${prod.priceRegular}</div>
                                 <div class="element-resize-handle no-print"></div>
                             </div>
@@ -855,21 +855,21 @@
                             const logoW = 100 * (s.clubLogoGlobalScale / 100);
                             clubLogoEl = `<img src="${state.clubLogoImg}" style="width: ${logoW}%; height: auto; object-fit: contain;">`;
                         } else { 
-                            clubLogoEl = `<div style="font-weight: 900; line-height: 1; text-transform: uppercase;">${textBottom}</div>`; 
+                            clubLogoEl = textBottom.trim() !== '' ? `<div style="font-weight: 900; line-height: 0.9; text-transform: uppercase;">${textBottom}</div>` : ''; 
                         }
 
-                        prefixHTML = `
-                            <div class="editable-element" data-index="${oIdx}" data-type="prefix" style="transform: translate(${prod.prefixTransform.x}px, ${prod.prefixTransform.y}px); font-size: ${prefixSize}rem; color: ${s.priceColor}; text-align: center; width: 100%; margin-top: 10px; margin-bottom: 4px; display: flex; justify-content: center; font-weight: 900;">
+                        prefixHTML = clubLogoEl !== '' ? `
+                            <div class="editable-element" data-index="${oIdx}" data-type="prefix" style="transform: translate(${prod.prefixTransform.x}px, ${prod.prefixTransform.y}px); font-size: ${prefixSize}rem; color: ${s.priceColor}; text-align: center; width: 100%; margin-top: 2px; margin-bottom: 0px; display: flex; justify-content: center; font-weight: 900;">
                                 ${clubLogoEl}
                                 <div class="element-resize-handle no-print"></div>
                             </div>
-                        `;
+                        ` : '';
                     }
 
                     pageDiv.innerHTML += `<div class="poster">${logoHTML}${headerHTML}
                         <div class="poster-body" style="padding: 2%;">
                             
-                            <div class="product-name editable-element" data-index="${oIdx}" data-type="name" style="transform: translate(${prod.nameTransform.x}px, ${prod.nameTransform.y}px); font-size: ${nameSize}rem; font-weight: 900;">
+                            <div class="product-name editable-element" data-index="${oIdx}" data-type="name" style="transform: translate(${prod.nameTransform.x}px, ${prod.nameTransform.y}px); font-size: ${nameSize}rem; font-weight: 900; line-height: 0.9;">
                                 ${prod.name}
                                 <div class="element-resize-handle no-print"></div>
                             </div>

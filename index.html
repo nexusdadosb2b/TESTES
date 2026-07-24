@@ -9,7 +9,7 @@
     <!-- SheetJS para ler arquivos Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    <!-- Fontes do Google (Mantidas grossas e intactas) -->
+    <!-- Fontes do Google -->
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;700;900&family=Oswald:wght@400;700&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
@@ -20,7 +20,7 @@
             --bg-color: #ffffff;
             --poster-bg: #ffffff;
             
-            /* Variáveis da Posição Dinâmica da Logo Principal */
+            /* Variáveis da Posição Dinâmica da Logo */
             --logo-x: 2%;
             --logo-y: 2%;
             --logo-w: 28%;
@@ -41,7 +41,7 @@
             padding: 20px 0;
         }
 
-        /* Página A4 Virtual - Impecável para Impressão Nativa */
+        /* Página A4 Virtual - Flexbox fixo para a foto em PDF sair sem quebras brancas */
         .a4-page {
             background: white;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -86,56 +86,187 @@
 
         /* TRAVA ABSOLUTA: Imagens e Blocos de Tema Automático */
         .poster-header, .poster-footer, .poster-header-auto, .poster-footer-auto {
-            position: absolute; left: 0; width: 100%; height: 20% !important; object-fit: cover; z-index: 10; box-sizing: border-box;
+            position: absolute; 
+            left: 0;
+            width: 100%;
+            height: 20% !important; 
+            object-fit: cover;
+            z-index: 10;
+            box-sizing: border-box;
         }
+
         .poster-header, .poster-header-auto { top: 0; }
         .poster-footer, .poster-footer-auto { bottom: 0; }
 
         .poster-header-auto, .poster-footer-auto {
-            display: flex; align-items: center; justify-content: center; text-transform: uppercase; font-weight: 900; text-align: center; padding: 0 5%; font-family: var(--font-family);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+            font-weight: 900;
+            text-align: center;
+            padding: 0 5%;
+            font-family: var(--font-family);
         }
 
-        /* LOGO PRINCIPAL ARRASTÁVEL */
+        /* LOGO ARRASTÁVEL E REDIMENSIONÁVEL */
         .logo-container {
-            position: absolute; top: var(--logo-y); left: var(--logo-x); width: var(--logo-w); z-index: 40; cursor: grab; border: 2px dashed transparent; box-sizing: border-box; transition: border-color 0.2s;
+            position: absolute;
+            top: var(--logo-y);
+            left: var(--logo-x);
+            width: var(--logo-w);
+            z-index: 40; 
+            cursor: grab;
+            border: 2px dashed transparent;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
         }
+
         .logo-container:hover { border-color: rgba(59, 130, 246, 0.5); }
         .logo-container:active { cursor: grabbing; border-color: rgba(59, 130, 246, 1); }
-        .poster-logo { width: 100%; height: auto; object-fit: contain; pointer-events: none; display: block; }
-        
-        .resize-handle {
-            position: absolute; bottom: -6px; right: -6px; width: 16px; height: 16px; background-color: #3b82f6; border: 2px solid white; border-radius: 50%; cursor: se-resize; display: none; z-index: 50; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+
+        .poster-logo {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            pointer-events: none; 
+            display: block;
         }
-        .logo-container:hover .resize-handle, .logo-container:active .resize-handle { display: block; }
+
+        .resize-handle {
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            width: 16px;
+            height: 16px;
+            background-color: #3b82f6;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: se-resize;
+            display: none;
+            z-index: 50;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .logo-container:hover .resize-handle, 
+        .logo-container:active .resize-handle { display: block; }
 
         /* Corpo central com texto */
         .poster-body {
-            position: absolute; top: 20%; left: 0; width: 100%; height: 60% !important; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5%; text-align: center; font-family: var(--font-family); box-sizing: border-box; overflow: visible; z-index: 5;
+            position: absolute;
+            top: 20%; 
+            left: 0;
+            width: 100%;
+            height: 60% !important; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5%;
+            text-align: center;
+            font-family: var(--font-family);
+            box-sizing: border-box;
+            overflow: visible; 
+            z-index: 5;
         }
 
-        .product-name { color: var(--prod-color); font-weight: 900; line-height: 1.1; text-transform: uppercase; text-align: center; width: 100%; word-wrap: break-word; }
-        
-        /* Interação de Edição Individual (Arrastar e Redimensionar Textos/Logos) */
-        .editable-element { position: relative; cursor: grab; border: 2px dashed transparent; transition: border-color 0.2s; box-sizing: border-box; z-index: 20; }
+        .product-name, .product-price {
+            font-weight: 900; /* Garante a fonte pesada/impacto */
+        }
+
+        .product-name {
+            color: var(--prod-color);
+            line-height: 1.1;
+            text-transform: uppercase;
+            text-align: center;
+            width: 100%;
+            word-wrap: break-word;
+        }
+
+        .product-price {
+            color: var(--price-color);
+            line-height: 1;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* Interação de Edição Individual (Arrastar e Redimensionar Textos) */
+        .editable-element {
+            position: relative;
+            cursor: grab;
+            border: 2px dashed transparent;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+            z-index: 20;
+        }
+
         .editable-element:hover { border-color: rgba(59, 130, 246, 0.4); }
         .editable-element:active { cursor: grabbing; border-color: rgba(59, 130, 246, 0.8); }
-        .editable-element:hover .element-resize-handle, .editable-element:active .element-resize-handle { display: block; }
-        .element-resize-handle { position: absolute; bottom: -6px; right: -6px; width: 16px; height: 16px; background-color: #10b981; border: 2px solid white; border-radius: 50%; cursor: se-resize; display: none; z-index: 50; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .editable-element:hover .element-resize-handle,
+        .editable-element:active .element-resize-handle { display: block; }
+        
+        .element-resize-handle {
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            width: 16px;
+            height: 16px;
+            background-color: #10b981; 
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: se-resize;
+            display: none;
+            z-index: 50;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
 
         /* CSS NATIVO DE IMPRESSÃO */
         @media print {
             .no-print { display: none !important; }
             .no-print-bg { background: none !important; }
+            
             .logo-container { border: none !important; }
             .resize-handle { display: none !important; }
             .editable-element { border: none !important; }
             .element-resize-handle { display: none !important; }
 
-            body, html { height: 100% !important; min-height: 100% !important; margin: 0 !important; padding: 0 !important; background-color: white !important; overflow: hidden !important; }
-            main { height: 100% !important; overflow: visible !important; position: static !important; margin: 0 !important; padding: 0 !important; }
-            .preview-container { padding: 0 !important; margin: 0 !important; gap: 0; display: block; overflow: visible !important; }
-            .a4-page { box-shadow: none !important; margin: 0 !important; border: none !important; }
+            body, html {
+                height: auto !important; 
+                min-height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: white !important;
+                overflow: visible !important; 
+            }
+
+            main {
+                height: auto !important;
+                overflow: visible !important;
+                position: static !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .preview-container {
+                padding: 0 !important;
+                margin: 0 !important;
+                gap: 0;
+                display: block; 
+                overflow: visible !important;
+            }
+
+            .a4-page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                border: none !important;
+            }
+
             #toastContainer { display: none !important; }
+
             @page { margin: 0; }
         }
     </style>
@@ -145,7 +276,6 @@
 </head>
 <body class="h-screen flex flex-col md:flex-row overflow-hidden relative">
 
-    <!-- OVERLAY LOGIN -->
     <div id="loginOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-[100]">
         <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md border-t-4 border-blue-600">
             <h2 class="text-2xl font-black text-center text-gray-800 mb-2">PromoPrint Maker</h2>
@@ -166,11 +296,9 @@
         </div>
     </div>
 
-    <!-- NOTIFICAÇÕES TOAST -->
     <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
 
     <aside class="no-print w-full md:w-[420px] bg-white shadow-xl h-full flex flex-col overflow-y-auto z-10 border-r border-gray-200">
-        <!-- HEADER ASIDE -->
         <div class="p-6 bg-blue-700 text-white shrink-0 flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-bold flex items-center gap-2">
@@ -208,7 +336,6 @@
                     </button>
                 </div>
 
-                <!-- PAINEL ARTE/IMAGEM -->
                 <div id="panelImage" class="space-y-3">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Cabeçalho (Topo)</label>
@@ -220,8 +347,8 @@
                     </div>
                 </div>
 
-                <!-- PAINEL TEMA AUTOMÁTICO -->
                 <div id="panelAuto" class="space-y-4 hidden bg-yellow-50 p-4 border border-yellow-200 rounded-lg shadow-inner">
+                    <!-- Configurações Automáticas Mantidas Intactas -->
                     <div>
                         <label class="block text-[10px] font-bold text-gray-700 mb-2 uppercase">Cores Prontas</label>
                         <div class="grid grid-cols-2 gap-2">
@@ -231,7 +358,6 @@
                             <button class="preset-btn text-xs py-1.5 rounded font-bold bg-black text-white border border-gray-700 hover:bg-gray-900 shadow" data-bg="#000000" data-text="#ffffff" data-foot="#111111">Black Friday</button>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-3 gap-2">
                         <div>
                             <label class="block text-[10px] font-bold text-gray-600 mb-1">Fundo Topo</label>
@@ -246,7 +372,6 @@
                             <input type="color" id="autoFooterBg" value="#dc2626" class="h-8 w-full rounded border border-gray-300 cursor-pointer shadow-sm">
                         </div>
                     </div>
-
                     <div class="grid grid-cols-2 gap-4 mt-2">
                         <div>
                             <label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">
@@ -261,7 +386,6 @@
                             <input type="range" id="autoSubScale" min="50" max="250" value="100" class="w-full h-2 bg-yellow-200 rounded-lg appearance-none cursor-pointer">
                         </div>
                     </div>
-
                     <div>
                         <label class="block text-xs font-bold text-gray-600 mb-1">Frase Principal (Topo)</label>
                         <input type="text" id="autoThemeText" value="OFERTA IMPERDÍVEL" class="w-full text-sm border-gray-300 rounded border p-2 outline-none uppercase font-bold focus:ring-yellow-500 shadow-sm">
@@ -273,31 +397,41 @@
                 </div>
             </div>
 
-            <!-- SEÇÃO 2: PRODUTOS E PREÇOS DUPLOS -->
+            <!-- SEÇÃO 2: PRODUTOS -->
             <div class="space-y-4">
                 <div class="flex justify-between items-end border-b pb-2">
                     <h2 class="text-lg font-bold text-gray-800">2. Produtos</h2>
-                    <button id="clearProductsBtn" data-confirm="false" class="text-xs text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer bg-blue-50 px-2 py-1 rounded transition-colors duration-200">Limpar Produtos</button>
-                </div>
-
-                <div class="bg-blue-50 p-3 rounded-md border border-blue-200 shadow-sm">
-                    <label class="block text-sm font-bold text-blue-800 mb-1">Tipo de Promoção</label>
-                    <select id="promoType" class="w-full text-sm border-blue-300 rounded border p-2 focus:ring-blue-500 outline-none cursor-pointer font-semibold text-blue-900">
-                        <option value="normal">Promoção Normal (1 Preço)</option>
-                        <option value="club">Clube de Vantagens (2 Preços)</option>
-                        <option value="from_to">De / Por (2 Preços)</option>
-                    </select>
+                    <button id="clearProductsBtn" class="text-xs text-red-600 hover:text-red-800 font-bold cursor-pointer bg-red-50 px-2 py-1 rounded border border-red-200 transition">Limpar Produtos</button>
                 </div>
                 
+                <!-- SELETOR DE TIPO DE PROMOÇÃO -->
+                <div class="bg-indigo-50 p-3 rounded-md border border-indigo-200 shadow-sm">
+                    <label class="block text-sm font-bold text-indigo-800 mb-2">Estratégia de Preço</label>
+                    <select id="promoType" class="w-full pl-3 pr-10 py-2 text-sm border-indigo-300 rounded-md shadow-sm font-bold text-indigo-900 cursor-pointer">
+                        <option value="normal">Promoção Normal (1 Preço)</option>
+                        <option value="club">Clube de Vantagens (2 Preços)</option>
+                        <option value="from_to">Oferta DE / POR (2 Preços)</option>
+                    </select>
+                </div>
+
                 <div class="bg-white p-3 rounded-md border border-gray-200 shadow-sm">
                     <label class="block text-sm font-bold text-gray-700 mb-2">Digitar Manualmente</label>
                     <div class="space-y-2">
                         <input type="text" id="manualProdName" placeholder="Ex: ARROZ TIPO 1 5KG" class="w-full text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none uppercase">
+                        
                         <div class="flex gap-2">
-                            <input type="text" id="manualProdPrice" placeholder="Ex: 24,90" class="w-full text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none">
-                            <input type="text" id="manualProdPriceRegular" placeholder="Ex: Normal 29,90" class="w-full text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none hidden">
+                            <!-- Preço Normal (Oculto por padrão) -->
+                            <div id="boxPriceReg" class="w-1/2 hidden">
+                                <input type="text" id="manualProdPriceRegular" placeholder="Ex: 29,90" class="w-full text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none" title="Preço Anterior">
+                                <span id="labelPriceReg" class="text-[10px] text-gray-500 font-bold block mt-1">Preço Normal</span>
+                            </div>
+                            <!-- Preço Principal/Promo -->
+                            <div id="boxPriceMain" class="w-full">
+                                <input type="text" id="manualProdPrice" placeholder="Ex: 24,90" class="w-full text-sm border-gray-300 rounded border p-2 focus:ring-blue-500 outline-none" title="Preço em Destaque">
+                                <span id="labelPriceMain" class="text-[10px] text-blue-600 font-bold block mt-1 hidden">Preço Promo</span>
+                            </div>
                         </div>
-                        <button id="addManualBtn" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold rounded py-2 text-sm shadow">Adicionar Produto</button>
+                        <button id="addManualBtn" class="w-full mt-2 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded py-2 text-sm shadow">Adicionar Produto</button>
                     </div>
                 </div>
 
@@ -316,7 +450,7 @@
                 </div>
             </div>
 
-            <!-- SEÇÃO 3: ESTILO E TEXTOS -->
+            <!-- SEÇÃO 3: ESTILO -->
             <div class="space-y-4">
                 <h2 class="text-lg font-bold text-gray-800 border-b pb-2">3. Estilo e Textos</h2>
                 
@@ -330,62 +464,75 @@
                     </select>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-md border border-gray-200">
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-700 mb-1">Cor do Produto</label>
-                        <input type="color" id="prodColor" value="#1f2937" class="h-8 w-full rounded border border-gray-300 cursor-pointer">
+                <!-- CONTROLES DO PREÇO PRINCIPAL (SEMPRE VISÍVEIS) -->
+                <div class="bg-gray-50 p-3 rounded-md border border-gray-200 space-y-3">
+                    <p class="text-xs font-black text-gray-500 uppercase">Preço Principal / Promo</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1">Cor do Produto</label>
+                            <input type="color" id="prodColor" value="#1f2937" class="h-8 w-full rounded border border-gray-300 cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1">Cor do Preço</label>
+                            <input type="color" id="priceColor" value="#ef4444" class="h-8 w-full rounded border border-gray-300 cursor-pointer">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-700 mb-1">Cor do Preço Principal</label>
-                        <input type="color" id="priceColor" value="#ef4444" class="h-8 w-full rounded border border-gray-300 cursor-pointer">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1 flex justify-between">
+                                Tam. Produto <span id="prodFontSizeDisplay" class="text-blue-600">100%</span>
+                            </label>
+                            <input type="range" id="prodFontSizeScale" min="50" max="200" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1 flex justify-between">
+                                Tam. Preço <span id="priceFontSizeDisplay" class="text-blue-600">100%</span>
+                            </label>
+                            <input type="range" id="priceFontSizeScale" min="50" max="250" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none">
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1 flex justify-between">
-                            Tamanho Produto <span id="prodFontSizeDisplay" class="text-blue-600">100%</span>
-                        </label>
-                        <input type="range" id="prodFontSizeScale" min="50" max="200" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1 flex justify-between">
-                            Tamanho Preço Princ. <span id="priceFontSizeDisplay" class="text-blue-600">100%</span>
-                        </label>
-                        <input type="range" id="priceFontSizeScale" min="50" max="250" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
-                    </div>
-                </div>
-
-                <!-- PAINEL OCULTO: AJUSTES DO PREÇO ANTERIOR E CLUBE -->
-                <div id="promoSettingsPanel" class="hidden space-y-3 mt-4 border-t pt-3 border-gray-200">
-                    <h3 class="text-sm font-bold text-gray-700">Ajustes do Preço Anterior / Clube</h3>
-                    <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-md border border-gray-200">
+                <!-- CONTROLES DO PREÇO ANTERIOR E TEXTOS (OCULTOS POR PADRÃO) -->
+                <div id="panelSecondaryPrice" class="bg-indigo-50 p-3 rounded-md border border-indigo-200 space-y-3 hidden">
+                    <p class="text-xs font-black text-indigo-500 uppercase">Preço Anterior e Textos</p>
+                    
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-[10px] font-bold text-gray-700 mb-1">Cor Preço Anterior</label>
                             <input type="color" id="priceRegColor" value="#6b7280" class="h-8 w-full rounded border border-gray-300 cursor-pointer">
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">
-                                Tamanho Anterior <span id="priceRegFontSizeDisplay" class="text-blue-600">100%</span>
+                                Tamanho Anterior <span id="priceRegFontSizeDisplay" class="text-indigo-600">100%</span>
                             </label>
-                            <input type="range" id="priceRegFontSizeScale" min="50" max="250" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                            <input type="range" id="priceRegFontSizeScale" min="50" max="200" value="100" class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer mt-2">
                         </div>
                     </div>
+
                     <div class="grid grid-cols-2 gap-2 mt-2">
                         <div>
-                            <label class="block text-[10px] font-bold text-gray-700 mb-1">Texto Acima Anterior</label>
-                            <input type="text" id="textPromoTop" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold text-center">
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1" id="labelTxtTop">Texto Acima (De/Normal)</label>
+                            <input type="text" id="textPromoTop" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold" value="DE R$">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-gray-700 mb-1">Texto Acima Principal</label>
-                            <input type="text" id="textPromoBottom" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold text-center">
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1" id="labelTxtBottom">Texto Principal (Por/Clube)</label>
+                            <input type="text" id="textPromoBottom" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold" value="POR">
                         </div>
                     </div>
 
                     <!-- LOGO DO CLUBE DE VANTAGENS -->
-                    <div id="clubLogoContainer" class="hidden mt-3 pt-3 border-t border-gray-200">
-                        <label class="block text-xs font-bold text-indigo-700 mb-1">Logo do Clube (Substitui o Texto Acima Principal)</label>
-                        <input type="file" id="clubLogoUpload" accept="image/*" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
+                    <div id="clubLogoContainer" class="hidden mt-3 pt-3 border-t border-indigo-200">
+                        <label class="block text-xs font-bold text-indigo-800 mb-1">Logo do Clube (Substitui o Texto)</label>
+                        <input type="file" id="clubLogoUpload" accept="image/*" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
+                        
+                        <div class="mt-2 mb-2">
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1 flex justify-between">
+                                Tamanho Global do Logo <span id="clubLogoScaleDisplay" class="text-indigo-600">100%</span>
+                            </label>
+                            <input type="range" id="clubLogoScale" min="20" max="300" value="100" class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
                         <button id="clearClubLogoBtn" class="text-[10px] font-bold text-red-500 hover:text-red-700 mt-1 hidden underline">Remover Logo do Clube</button>
                     </div>
                 </div>
@@ -394,7 +541,6 @@
             <!-- SEÇÃO 4: SAÍDA -->
             <div class="space-y-4">
                 <h2 class="text-lg font-bold text-gray-800 border-b pb-2">4. Saída e Layout</h2>
-                
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">Cartazes por Folha A4</label>
                     <div class="grid grid-cols-3 gap-2 mt-2">
@@ -412,9 +558,9 @@
                     <span id="cloudStatus" class="text-[10px] font-bold bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full border border-yellow-200">Aguardando login...</span>
                 </h2>
 
-                <button id="newProjectBtn" data-confirm="false" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black py-3 px-4 rounded-lg border border-indigo-200 shadow-sm transition-all duration-200 transform active:scale-95 flex justify-center items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                    <span>CRIAR NOVO PROJETO (Limpar Tudo)</span>
+                <button id="newProjectBtn" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black py-3 px-4 rounded-lg border border-indigo-200 shadow-sm transition-transform transform active:scale-95 flex justify-center items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    CRIAR NOVO PROJETO (Limpar Tudo)
                 </button>
                 
                 <div class="pt-2">
@@ -434,18 +580,16 @@
             </div>
         </div>
 
-        <!-- BOTÃO FINAL (IMPRIMIR / PDF NATIVO) -->
         <div class="p-4 border-t bg-white sticky bottom-0 shrink-0 z-20 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)]">
-            <div class="flex flex-col gap-2">
-                <button id="printBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-black text-sm py-4 px-4 rounded-lg shadow-lg transition-transform transform active:scale-95 flex flex-col justify-center items-center gap-1 border border-green-800">
-                    <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                        <span class="text-lg">IMPRIMIR OU SALVAR PDF</span>
-                    </div>
-                    <span class="text-[10px] font-medium text-green-100">Abre a tela nativa. Escolha sua impressora ou a opção "Salvar como PDF"</span>
-                </button>
-            </div>
-            <p class="text-[10px] font-bold text-center text-gray-500 mt-2 leading-tight">Dica: Na tela de impressão, marque a opção "Imprimir Gráficos de Plano de Fundo" para as cores de fundo aparecerem corretamente.</p>
+            <button id="printBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-black text-lg py-4 px-4 rounded-lg shadow-lg transition-transform transform active:scale-95 flex flex-col items-center justify-center gap-1 border-2 border-green-800">
+                <span class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    GERAR PDF OU IMPRIMIR
+                </span>
+            </button>
+            <p class="text-[10px] font-bold text-center text-gray-600 mt-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+                💡 Ao abrir a tela, mude o destino para "Salvar como PDF" ou escolha sua impressora. Marque a opção <b>Gráficos de Plano de Fundo</b>.
+            </p>
         </div>
     </aside>
 
@@ -483,10 +627,8 @@
         let app, auth, db;
         let currentUser = null;
         let currentSessionId = null;
-        
         let currentProjectId = null; 
         let loadedProjectName = ""; 
-        
         let unsubscribeProjects = null;
         let sessionUnsubscribe = null;
 
@@ -504,7 +646,8 @@
                 promoType: 'normal',
                 priceRegColor: "#6b7280", priceRegFontScale: 100,
                 textPromoDe: "DE R$", textPromoPor: "POR",
-                textClubNormal: "PREÇO NORMAL R$", textClubPromo: "CLIENTE CLUBE"
+                textClubNormal: "PREÇO NORMAL R$", textClubPromo: "CLIENTE CLUBE",
+                clubLogoScale: 100
             }
         };
 
@@ -526,27 +669,28 @@
             priceColor: document.getElementById('priceColor'), prodFontSizeScale: document.getElementById('prodFontSizeScale'),
             priceFontSizeScale: document.getElementById('priceFontSizeScale'), prodFontSizeDisplay: document.getElementById('prodFontSizeDisplay'),
             priceFontSizeDisplay: document.getElementById('priceFontSizeDisplay'), layoutBtns: document.querySelectorAll('.layout-btn'),
-            printBtn: document.getElementById('printBtn'),
-            previewContainer: document.getElementById('previewContainer'), pageCountDisplay: document.getElementById('pageCountDisplay'),
-            dynamicPrintStyle: document.getElementById('dynamicPrintStyle'), toastContainer: document.getElementById('toastContainer'),
-            projectName: document.getElementById('projectName'), saveProjectBtn: document.getElementById('saveProjectBtn'),
-            savedProjectsList: document.getElementById('savedProjectsList'), cloudStatus: document.getElementById('cloudStatus'),
-            manualProdName: document.getElementById('manualProdName'), manualProdPrice: document.getElementById('manualProdPrice'),
-            addManualBtn: document.getElementById('addManualBtn'), clearProductsBtn: document.getElementById('clearProductsBtn'),
-            newProjectBtn: document.getElementById('newProjectBtn'),
-            promoType: document.getElementById('promoType'), manualProdPriceRegular: document.getElementById('manualProdPriceRegular'),
-            excelInstructions: document.getElementById('excelInstructions'), promoSettingsPanel: document.getElementById('promoSettingsPanel'),
+            printBtn: document.getElementById('printBtn'), previewContainer: document.getElementById('previewContainer'), 
+            pageCountDisplay: document.getElementById('pageCountDisplay'), dynamicPrintStyle: document.getElementById('dynamicPrintStyle'), 
+            toastContainer: document.getElementById('toastContainer'), projectName: document.getElementById('projectName'), 
+            saveProjectBtn: document.getElementById('saveProjectBtn'), savedProjectsList: document.getElementById('savedProjectsList'), 
+            cloudStatus: document.getElementById('cloudStatus'), manualProdName: document.getElementById('manualProdName'), 
+            manualProdPrice: document.getElementById('manualProdPrice'), addManualBtn: document.getElementById('addManualBtn'), 
+            clearProductsBtn: document.getElementById('clearProductsBtn'), newProjectBtn: document.getElementById('newProjectBtn'),
+            promoType: document.getElementById('promoType'), boxPriceReg: document.getElementById('boxPriceReg'),
+            boxPriceMain: document.getElementById('boxPriceMain'), manualProdPriceRegular: document.getElementById('manualProdPriceRegular'),
+            labelPriceReg: document.getElementById('labelPriceReg'), labelPriceMain: document.getElementById('labelPriceMain'),
+            excelInstructions: document.getElementById('excelInstructions'), panelSecondaryPrice: document.getElementById('panelSecondaryPrice'),
             priceRegColor: document.getElementById('priceRegColor'), priceRegFontSizeScale: document.getElementById('priceRegFontSizeScale'),
             priceRegFontSizeDisplay: document.getElementById('priceRegFontSizeDisplay'), textPromoTop: document.getElementById('textPromoTop'),
-            textPromoBottom: document.getElementById('textPromoBottom'),
-            clubLogoContainer: document.getElementById('clubLogoContainer'), clubLogoUpload: document.getElementById('clubLogoUpload'),
-            clearClubLogoBtn: document.getElementById('clearClubLogoBtn')
+            textPromoBottom: document.getElementById('textPromoBottom'), clubLogoContainer: document.getElementById('clubLogoContainer'), 
+            clubLogoUpload: document.getElementById('clubLogoUpload'), clearClubLogoBtn: document.getElementById('clearClubLogoBtn'),
+            clubLogoScale: document.getElementById('clubLogoScale'), clubLogoScaleDisplay: document.getElementById('clubLogoScaleDisplay')
         };
 
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             const bgColors = { 'success': 'bg-green-600', 'error': 'bg-red-600', 'info': 'bg-blue-600' };
-            toast.className = `${bgColors[type]} text-white px-4 py-3 rounded shadow-lg transition-opacity duration-300 ease-in-out opacity-0 flex items-center justify-between min-w-[250px] font-bold text-sm z-50`;
+            toast.className = `${bgColors[type]} text-white px-4 py-3 rounded shadow-lg transition-opacity duration-300 ease-in-out opacity-0 flex items-center justify-between min-w-[250px] font-bold text-sm z-[200]`;
             toast.innerHTML = `<span>${message}</span>`;
             els.toastContainer.appendChild(toast);
             requestAnimationFrame(() => toast.classList.remove('opacity-0'));
@@ -557,33 +701,21 @@
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     currentUser = user; 
-                    els.loginOverlay.classList.add('hidden'); 
-                    els.logoutBtn.classList.remove('hidden');
+                    els.loginOverlay.classList.add('hidden'); els.logoutBtn.classList.remove('hidden');
                     els.cloudStatus.textContent = 'Nuvem Conectada'; 
                     els.cloudStatus.className = 'text-[10px] font-bold bg-green-100 text-green-800 px-2 py-1 rounded-full border border-green-200';
-                    
                     currentSessionId = crypto.randomUUID(); 
                     const sessionRef = doc(db, 'sessions', user.uid);
                     await setDoc(sessionRef, { sessionId: currentSessionId, lastLogin: serverTimestamp() });
                     if (sessionUnsubscribe) sessionUnsubscribe();
-                    sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => {
-                        if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) {
-                            signOut(auth).then(() => { alert("🚨 VOCÊ FOI DESCONECTADO! Sua conta foi acessada em outro computador."); window.location.reload(); });
-                        }
-                    });
-                    
+                    sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => { if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) { signOut(auth).then(() => { alert("🚨 VOCÊ FOI DESCONECTADO! Sua conta foi acessada em outro computador."); window.location.reload(); }); } });
                     loadSavedProjects();
                 } else {
                     currentUser = null; 
-                    els.loginOverlay.classList.remove('hidden'); 
-                    els.logoutBtn.classList.add('hidden');
+                    els.loginOverlay.classList.remove('hidden'); els.logoutBtn.classList.add('hidden');
                     els.savedProjectsList.innerHTML = '<li class="p-3 text-gray-500 text-center italic text-xs">Aguardando login...</li>';
                     if (sessionUnsubscribe) sessionUnsubscribe();
-
-                    els.loginBtn.textContent = "Entrar no Sistema";
-                    els.loginBtn.disabled = false;
-                    els.loginForm.reset(); 
-                    els.loginError.classList.add('hidden');
+                    els.loginBtn.textContent = "Entrar no Sistema"; els.loginBtn.disabled = false; els.loginForm.reset(); els.loginError.classList.add('hidden');
                 }
             });
         }
@@ -621,29 +753,54 @@
             if (!currentUser) return showToast("Faça login para salvar.", "error");
             const name = els.projectName.value.trim(); if (!name) return showToast("Dê um nome para sua campanha.", "error");
             els.saveProjectBtn.disabled = true; els.saveProjectBtn.textContent = 'Salvando...';
-            
             try {
                 let projectId = currentProjectId;
-                if (currentProjectId && name !== loadedProjectName) { projectId = crypto.randomUUID(); } 
-                else if (!currentProjectId) { projectId = crypto.randomUUID(); }
+                if (currentProjectId && name !== loadedProjectName) projectId = crypto.randomUUID(); 
+                else if (!currentProjectId) projectId = crypto.randomUUID(); 
 
                 await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', projectId), {
                     name, headerImg: state.headerImg, footerImg: state.footerImg, logoImg: state.logoImg, clubLogoImg: state.clubLogoImg, products: state.products, settings: state.settings, updatedAt: serverTimestamp()
                 });
-                
-                currentProjectId = projectId; loadedProjectName = name; 
-                showToast("Campanha salva com sucesso!", "success");
-            } catch (error) { showToast("Erro ao salvar.", "error"); } 
-            finally { els.saveProjectBtn.disabled = false; els.saveProjectBtn.textContent = 'Salvar'; }
+                currentProjectId = projectId; loadedProjectName = name; showToast("Campanha salva com sucesso!", "success");
+            } catch (error) { showToast("Erro ao salvar.", "error"); } finally { els.saveProjectBtn.disabled = false; els.saveProjectBtn.textContent = 'Salvar'; }
         }
+
+        function updatePromoUI() {
+            const v = state.settings.promoType;
+            if (v === 'normal') {
+                els.boxPriceReg.classList.add('hidden'); els.boxPriceMain.classList.replace('w-1/2', 'w-full');
+                els.labelPriceMain.classList.add('hidden');
+                els.excelInstructions.innerHTML = "Colunas obrigatórias: <b>1ª Produto</b> | <b>2ª Preço</b>";
+                els.panelSecondaryPrice.classList.add('hidden');
+            } else {
+                els.boxPriceReg.classList.remove('hidden'); els.boxPriceMain.classList.replace('w-full', 'w-1/2');
+                els.labelPriceMain.classList.remove('hidden');
+                els.excelInstructions.innerHTML = "Colunas: <b>1ª Produto</b> | <b>2ª Preço Anterior</b> | <b>3ª Preço Atual</b>";
+                els.panelSecondaryPrice.classList.remove('hidden');
+                
+                if(v === 'club') {
+                    els.labelPriceReg.textContent = "Preço Normal"; els.labelPriceMain.textContent = "Preço Clube";
+                    els.textPromoTop.value = state.settings.textClubNormal || "PREÇO NORMAL R$"; els.textPromoBottom.value = state.settings.textClubPromo || "CLIENTE CLUBE";
+                    els.clubLogoContainer.classList.remove('hidden');
+                } else {
+                    els.labelPriceReg.textContent = "Preço DE"; els.labelPriceMain.textContent = "Preço POR";
+                    els.textPromoTop.value = state.settings.textPromoDe || "DE R$"; els.textPromoBottom.value = state.settings.textPromoPor || "POR";
+                    els.clubLogoContainer.classList.add('hidden');
+                }
+            }
+        }
+
+        els.promoType.addEventListener('change', (e) => { state.settings.promoType = e.target.value; updatePromoUI(); renderPosters(); });
 
         function loadProjectData(id, data) {
             currentProjectId = id; loadedProjectName = data.name || ''; els.projectName.value = loadedProjectName;
-            state.headerImg = data.headerImg || null; state.footerImg = data.footerImg || null; state.logoImg = data.logoImg || null; state.clubLogoImg = data.clubLogoImg || null;
-            state.products = data.products || [];
+            state.headerImg = data.headerImg || null; state.footerImg = data.footerImg || null; state.logoImg = data.logoImg || null; state.clubLogoImg = data.clubLogoImg || null; state.products = data.products || [];
+            
             if(state.logoImg) els.clearLogoBtn.classList.remove('hidden'); else els.clearLogoBtn.classList.add('hidden');
             if(state.clubLogoImg) els.clearClubLogoBtn.classList.remove('hidden'); else els.clearClubLogoBtn.classList.add('hidden');
+
             if (data.settings) state.settings = { ...state.settings, ...data.settings };
+            els.promoType.value = state.settings.promoType || 'normal';
             
             switchTab(state.settings.themeMode);
             els.posterBgColor.value = state.settings.posterBgColor; els.autoHeaderBg.value = state.settings.autoThemeHeaderBg;
@@ -655,10 +812,11 @@
             els.prodFontSizeScale.value = state.settings.prodFontScale; els.priceFontSizeScale.value = state.settings.priceFontScale;
             els.prodFontSizeDisplay.textContent = `${state.settings.prodFontScale}%`; els.priceFontSizeDisplay.textContent = `${state.settings.priceFontScale}%`;
             
-            els.promoType.value = state.settings.promoType || 'normal';
-            els.priceRegColor.value = state.settings.priceRegColor || '#6b7280';
+            els.priceRegColor.value = state.settings.priceRegColor || "#6b7280";
             els.priceRegFontSizeScale.value = state.settings.priceRegFontScale || 100;
             els.priceRegFontSizeDisplay.textContent = `${state.settings.priceRegFontScale || 100}%`;
+            els.clubLogoScale.value = state.settings.clubLogoScale || 100;
+            els.clubLogoScaleDisplay.textContent = `${state.settings.clubLogoScale || 100}%`;
             updatePromoUI();
 
             els.layoutBtns.forEach(b => {
@@ -677,87 +835,38 @@
             }
         }
 
-        function updatePromoUI() {
-            const t = state.settings.promoType;
-            if (t === 'normal') {
-                els.manualProdPriceRegular.classList.add('hidden');
-                els.promoSettingsPanel.classList.add('hidden');
-                els.excelInstructions.innerHTML = `Colunas obrigatórias: <b>1ª Produto</b> | <b>2ª Preço</b>`;
-            } else {
-                els.manualProdPriceRegular.classList.remove('hidden');
-                els.promoSettingsPanel.classList.remove('hidden');
-                els.excelInstructions.innerHTML = `Obrigatório: <b>1ª Produto</b> | <b>2ª Normal</b> | <b>3ª Promoção</b>`;
-                
-                if (t === 'club') {
-                    els.manualProdPriceRegular.placeholder = "Ex: Normal 29,90";
-                    els.textPromoTop.value = state.settings.textClubNormal;
-                    els.textPromoBottom.value = state.settings.textClubPromo;
-                    els.clubLogoContainer.classList.remove('hidden');
-                } else {
-                    els.manualProdPriceRegular.placeholder = "Ex: De 29,90";
-                    els.textPromoTop.value = state.settings.textPromoDe;
-                    els.textPromoBottom.value = state.settings.textPromoPor;
-                    els.clubLogoContainer.classList.add('hidden');
-                }
-            }
-        }
-
-        els.promoType.addEventListener('change', (e) => { state.settings.promoType = e.target.value; updatePromoUI(); renderPosters(); });
-        els.textPromoTop.addEventListener('input', (e) => { if(state.settings.promoType === 'club') state.settings.textClubNormal = e.target.value.toUpperCase(); else state.settings.textPromoDe = e.target.value.toUpperCase(); renderPosters(); });
-        els.textPromoBottom.addEventListener('input', (e) => { if(state.settings.promoType === 'club') state.settings.textClubPromo = e.target.value.toUpperCase(); else state.settings.textPromoPor = e.target.value.toUpperCase(); renderPosters(); });
-        els.priceRegColor.addEventListener('input', (e) => { state.settings.priceRegColor = e.target.value; renderPosters(); });
-        els.priceRegFontSizeScale.addEventListener('input', (e) => { state.settings.priceRegFontScale = parseInt(e.target.value); els.priceRegFontSizeDisplay.textContent = `${state.settings.priceRegFontScale}%`; renderPosters(); });
-
-        let clearProdTimer;
-        els.clearProductsBtn.addEventListener('click', () => { 
-            if(state.products.length === 0) return;
-            if(els.clearProductsBtn.dataset.confirm === "true") {
-                state.products = []; renderPosters(); 
-                els.clearProductsBtn.dataset.confirm = "false";
-                els.clearProductsBtn.textContent = "Limpar Produtos";
-                els.clearProductsBtn.classList.remove('bg-red-600', 'text-white', 'px-3');
-                clearTimeout(clearProdTimer);
-            } else {
-                els.clearProductsBtn.dataset.confirm = "true";
-                els.clearProductsBtn.textContent = "Certeza?";
-                els.clearProductsBtn.classList.add('bg-red-600', 'text-white', 'px-3');
-                clearProdTimer = setTimeout(() => {
-                    els.clearProductsBtn.dataset.confirm = "false";
-                    els.clearProductsBtn.textContent = "Limpar Produtos";
-                    els.clearProductsBtn.classList.remove('bg-red-600', 'text-white', 'px-3');
-                }, 3000);
-            }
-        });
-
         let newProjTimer;
-        els.newProjectBtn.addEventListener('click', () => {
-            if(els.newProjectBtn.dataset.confirm === "true") {
-                currentProjectId = null; loadedProjectName = ""; els.projectName.value = '';
-                state.products = []; state.logoImg = null; els.logoUpload.value = ''; els.clearLogoBtn.classList.add('hidden');
-                state.headerImg = null; els.headerUpload.value = ''; state.footerImg = null; els.footerUpload.value = '';
+        els.newProjectBtn.addEventListener('click', (e) => {
+            const btn = e.currentTarget;
+            if (btn.classList.contains('confirm-mode')) {
+                clearTimeout(newProjTimer);
+                btn.classList.remove('confirm-mode', 'bg-red-600', 'text-white', 'hover:bg-red-700');
+                btn.classList.add('bg-indigo-50', 'text-indigo-700', 'hover:bg-indigo-100');
+                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg> CRIAR NOVO PROJETO (Limpar Tudo)';
+
+                currentProjectId = null; loadedProjectName = ""; els.projectName.value = ''; state.products = [];
+                state.logoImg = null; els.logoUpload.value = ''; els.clearLogoBtn.classList.add('hidden');
                 state.clubLogoImg = null; els.clubLogoUpload.value = ''; els.clearClubLogoBtn.classList.add('hidden');
+                state.headerImg = null; els.headerUpload.value = ''; state.footerImg = null; els.footerUpload.value = '';
+                
                 els.manualProdName.value = ''; els.manualProdPrice.value = ''; els.manualProdPriceRegular.value = ''; els.excelUpload.value = '';
-                state.settings = { themeMode: 'image', posterBgColor: "#ffffff", autoThemeHeaderBg: "#ef4444", autoThemeFooterBg: "#dc2626", autoThemeTextColor: "#fef08a", autoThemeText: "OFERTA IMPERDÍVEL", autoThemeSecondaryText: "APROVEITE NOSSAS PROMOÇÕES", autoTitleScale: 100, autoSubScale: 100, fontFamily: "'Inter', sans-serif", prodColor: "#1f2937", priceColor: "#ef4444", prodFontScale: 100, priceFontScale: 100, layout: 1, logoX: 2, logoY: 2, logoW: 28, promoType: 'normal', priceRegColor: "#6b7280", priceRegFontScale: 100, textPromoDe: "DE R$", textPromoPor: "POR", textClubNormal: "PREÇO NORMAL R$", textClubPromo: "CLIENTE CLUBE" };
+                state.settings = { themeMode: 'image', posterBgColor: "#ffffff", autoThemeHeaderBg: "#ef4444", autoThemeFooterBg: "#dc2626", autoThemeTextColor: "#fef08a", autoThemeText: "OFERTA IMPERDÍVEL", autoThemeSecondaryText: "APROVEITE NOSSAS PROMOÇÕES", autoTitleScale: 100, autoSubScale: 100, fontFamily: "'Inter', sans-serif", prodColor: "#1f2937", priceColor: "#ef4444", prodFontScale: 100, priceFontScale: 100, layout: 1, logoX: 2, logoY: 2, logoW: 28, promoType: 'normal', priceRegColor: "#6b7280", priceRegFontScale: 100, textPromoDe: "DE R$", textPromoPor: "POR", textClubNormal: "PREÇO NORMAL R$", textClubPromo: "CLIENTE CLUBE", clubLogoScale: 100 };
                 
                 switchTab('image');
                 els.posterBgColor.value = "#ffffff"; els.autoHeaderBg.value = "#ef4444"; els.autoTextColor.value = "#fef08a"; els.autoFooterBg.value = "#dc2626"; els.autoThemeText.value = "OFERTA IMPERDÍVEL"; els.autoThemeSecondaryText.value = "APROVEITE NOSSAS PROMOÇÕES"; els.autoTitleScale.value = 100; els.autoSubScale.value = 100; els.autoTitleSizeDisplay.textContent = "100%"; els.autoSubSizeDisplay.textContent = "100%"; els.fontFamily.value = "'Inter', sans-serif"; els.prodColor.value = "#1f2937"; els.priceColor.value = "#ef4444"; els.prodFontSizeScale.value = 100; els.priceFontSizeScale.value = 100; els.prodFontSizeDisplay.textContent = "100%"; els.priceFontSizeDisplay.textContent = "100%"; els.promoType.value = "normal";
+                els.clubLogoScale.value = 100; els.clubLogoScaleDisplay.textContent = "100%";
                 
                 updatePromoUI();
                 els.layoutBtns.forEach(b => { if (parseInt(b.dataset.layout) === 1) { b.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.remove('border-gray-300', 'bg-white', 'text-gray-600', 'border'); } else { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); } });
-                renderPosters(); showToast("Novo projeto iniciado! Tela limpa.", "success");
-
-                els.newProjectBtn.dataset.confirm = "false";
-                els.newProjectBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>CRIAR NOVO PROJETO (Limpar Tudo)</span>`;
-                els.newProjectBtn.classList.replace('text-red-700', 'text-indigo-700'); els.newProjectBtn.classList.replace('border-red-400', 'border-indigo-200'); els.newProjectBtn.classList.replace('bg-red-50', 'bg-indigo-50');
-                clearTimeout(newProjTimer);
+                renderPosters(); showToast("Novo projeto iniciado! Tela totalmente limpa.", "success");
             } else {
-                els.newProjectBtn.dataset.confirm = "true";
-                els.newProjectBtn.innerHTML = `<span>Certeza? Apagará Tudo!</span>`;
-                els.newProjectBtn.classList.replace('text-indigo-700', 'text-red-700'); els.newProjectBtn.classList.replace('border-indigo-200', 'border-red-400'); els.newProjectBtn.classList.replace('bg-indigo-50', 'bg-red-50');
+                btn.classList.add('confirm-mode', 'bg-red-600', 'text-white', 'hover:bg-red-700');
+                btn.classList.remove('bg-indigo-50', 'text-indigo-700', 'hover:bg-indigo-100');
+                btn.innerHTML = "⚠️ TEM CERTEZA? CLIQUE NOVAMENTE";
                 newProjTimer = setTimeout(() => {
-                    els.newProjectBtn.dataset.confirm = "false";
-                    els.newProjectBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>CRIAR NOVO PROJETO (Limpar Tudo)</span>`;
-                    els.newProjectBtn.classList.replace('text-red-700', 'text-indigo-700'); els.newProjectBtn.classList.replace('border-red-400', 'border-indigo-200'); els.newProjectBtn.classList.replace('bg-red-50', 'bg-indigo-50');
+                    btn.classList.remove('confirm-mode', 'bg-red-600', 'text-white', 'hover:bg-red-700');
+                    btn.classList.add('bg-indigo-50', 'text-indigo-700', 'hover:bg-indigo-100');
+                    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg> CRIAR NOVO PROJETO (Limpar Tudo)';
                 }, 3000);
             }
         });
@@ -790,7 +899,7 @@
         els.autoSubScale.addEventListener('input', (e) => { state.settings.autoSubScale = parseInt(e.target.value); els.autoSubSizeDisplay.textContent = `${state.settings.autoSubScale}%`; renderPosters(); });
 
         function formatPrice(val) {
-            if (val === undefined || val === null) return "0,00";
+            if (val === undefined || val === null || val === '') return "";
             if (typeof val === 'number') return val.toFixed(2).replace('.', ',');
             let strVal = String(val).trim();
             if (strVal.includes(',')) return strVal;
@@ -799,6 +908,7 @@
         }
 
         function splitPrice(priceStr) {
+            if(!priceStr) return { intPart: "0", decPart: ",00" };
             const parts = priceStr.split(','); return { intPart: parts[0] || "0", decPart: parts[1] ? "," + parts[1].substring(0,2) : ",00" };
         }
 
@@ -810,7 +920,7 @@
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     let width = img.width, height = img.height;
-                    const MAX_WIDTH = stateKey === 'logoImg' || stateKey === 'clubLogoImg' ? 1000 : 2480; 
+                    const MAX_WIDTH = (stateKey === 'logoImg' || stateKey === 'clubLogoImg') ? 1000 : 2480; 
                     if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
                     canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
@@ -830,24 +940,17 @@
             const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = (event) => {
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
+                const data = new Uint8Array(event.target.result); const workbook = XLSX.read(data, {type: 'array'});
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
                 const parsedProducts = [];
                 for (let i = 1; i < json.length; i++) {
                     const row = json[i]; 
                     if (row && row[0] && row[1]) {
-                        let pReg = "";
-                        if(state.settings.promoType !== 'normal' && row[2]) pReg = formatPrice(row[2]);
-                        
                         parsedProducts.push({ 
                             name: String(row[0]).trim(), 
-                            price: formatPrice(row[1]),
-                            priceRegular: pReg,
-                            nameTransform: { x: 0, y: 0, scale: 1 },
-                            priceTransform: { x: 0, y: 0, scale: 1 },
-                            priceRegularTransform: { x: 0, y: 0, scale: 1 },
-                            clubLogoTransform: { x: 0, y: 0, scale: 1 }
+                            price: formatPrice(row[state.settings.promoType === 'normal' ? 1 : 2]),
+                            priceRegular: state.settings.promoType !== 'normal' && row[1] ? formatPrice(row[1]) : "",
+                            nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, clubLogoTransform: { x: 0, y: 0, scale: 1 }
                         });
                     }
                 }
@@ -858,43 +961,25 @@
             reader.readAsArrayBuffer(file);
         }
 
-        els.addManualBtn.addEventListener('click', () => {
-            const name = els.manualProdName.value.trim(), price = els.manualProdPrice.value.trim();
-            let priceReg = els.manualProdPriceRegular.value.trim();
-            if (!name || !price) return showToast("Preencha nome e preço principal.", "error");
-            if (state.settings.promoType !== 'normal' && !priceReg) return showToast("Preencha o preço anterior/normal.", "error");
+        els.textPromoTop.addEventListener('input', (e) => { if(state.settings.promoType === 'club') state.settings.textClubNormal = e.target.value.toUpperCase(); else state.settings.textPromoDe = e.target.value.toUpperCase(); renderPosters(); });
+        els.textPromoBottom.addEventListener('input', (e) => { if(state.settings.promoType === 'club') state.settings.textClubPromo = e.target.value.toUpperCase(); else state.settings.textPromoPor = e.target.value.toUpperCase(); renderPosters(); });
+        els.priceRegColor.addEventListener('input', (e) => { state.settings.priceRegColor = e.target.value; renderPosters(); });
+        els.priceRegFontSizeScale.addEventListener('input', (e) => { state.settings.priceRegFontScale = parseInt(e.target.value); els.priceRegFontSizeDisplay.textContent = `${state.settings.priceRegFontScale}%`; renderPosters(); });
+        els.clubLogoScale.addEventListener('input', (e) => { state.settings.clubLogoScale = parseInt(e.target.value); els.clubLogoScaleDisplay.textContent = `${state.settings.clubLogoScale}%`; renderPosters(); });
 
-            state.products.push({ 
-                name: name.toUpperCase(), 
-                price: formatPrice(price),
-                priceRegular: formatPrice(priceReg),
-                nameTransform: { x: 0, y: 0, scale: 1 },
-                priceTransform: { x: 0, y: 0, scale: 1 },
-                priceRegularTransform: { x: 0, y: 0, scale: 1 },
-                clubLogoTransform: { x: 0, y: 0, scale: 1 }
-            });
-            els.manualProdName.value = ''; els.manualProdPrice.value = ''; els.manualProdPriceRegular.value = ''; els.manualProdName.focus(); renderPosters(); showToast("Inserido!", "success");
+        let clearProdTimer;
+        els.clearProductsBtn.addEventListener('click', (e) => { 
+            if(state.products.length === 0) return;
+            const btn = e.currentTarget;
+            if(btn.classList.contains('confirm-mode')) {
+                clearTimeout(clearProdTimer); state.products = []; renderPosters();
+                btn.classList.remove('confirm-mode', 'bg-red-600', 'text-white'); btn.classList.add('bg-red-50', 'text-red-600'); btn.textContent = "Limpar Produtos";
+            } else {
+                btn.classList.add('confirm-mode', 'bg-red-600', 'text-white'); btn.classList.remove('bg-red-50', 'text-red-600'); btn.textContent = "Tem certeza?";
+                clearProdTimer = setTimeout(() => { btn.classList.remove('confirm-mode', 'bg-red-600', 'text-white'); btn.classList.add('bg-red-50', 'text-red-600'); btn.textContent = "Limpar Produtos"; }, 3000);
+            }
         });
 
-        els.clearLogoBtn.addEventListener('click', () => { state.logoImg = null; els.logoUpload.value = ''; els.clearLogoBtn.classList.add('hidden'); renderPosters(); });
-        els.clearClubLogoBtn.addEventListener('click', () => { state.clubLogoImg = null; els.clubLogoUpload.value = ''; els.clearClubLogoBtn.classList.add('hidden'); renderPosters(); });
-        
-        els.headerUpload.addEventListener('change', (e) => handleImageUpload(e, 'headerImg')); els.footerUpload.addEventListener('change', (e) => handleImageUpload(e, 'footerImg')); els.logoUpload.addEventListener('change', (e) => handleImageUpload(e, 'logoImg')); els.clubLogoUpload.addEventListener('change', (e) => handleImageUpload(e, 'clubLogoImg')); els.excelUpload.addEventListener('change', handleExcelUpload);
-        els.posterBgColor.addEventListener('input', (e) => { state.settings.posterBgColor = e.target.value; renderPosters(); });
-        els.autoHeaderBg.addEventListener('input', (e) => { state.settings.autoThemeHeaderBg = e.target.value; renderPosters(); });
-        els.autoTextColor.addEventListener('input', (e) => { state.settings.autoThemeTextColor = e.target.value; renderPosters(); });
-        els.autoFooterBg.addEventListener('input', (e) => { state.settings.autoThemeFooterBg = e.target.value; renderPosters(); });
-        els.autoThemeText.addEventListener('input', (e) => { state.settings.autoThemeText = e.target.value.toUpperCase(); renderPosters(); });
-        els.autoThemeSecondaryText.addEventListener('input', (e) => { state.settings.autoThemeSecondaryText = e.target.value.toUpperCase(); renderPosters(); });
-        els.fontFamily.addEventListener('change', (e) => { state.settings.fontFamily = e.target.value; renderPosters(); });
-        els.prodColor.addEventListener('input', (e) => { state.settings.prodColor = e.target.value; renderPosters(); });
-        els.priceColor.addEventListener('input', (e) => { state.settings.priceColor = e.target.value; renderPosters(); });
-        els.prodFontSizeScale.addEventListener('input', (e) => { state.settings.prodFontScale = parseInt(e.target.value); els.prodFontSizeDisplay.textContent = `${state.settings.prodFontScale}%`; renderPosters(); });
-        els.priceFontSizeScale.addEventListener('input', (e) => { state.settings.priceFontScale = parseInt(e.target.value); els.priceFontSizeDisplay.textContent = `${state.settings.priceFontScale}%`; renderPosters(); });
-        els.layoutBtns.forEach(btn => { btn.addEventListener('click', (e) => { els.layoutBtns.forEach(b => { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); }); e.currentTarget.classList.remove('border-gray-300', 'bg-white', 'text-gray-600', 'border'); e.currentTarget.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); state.settings.layout = parseInt(e.currentTarget.dataset.layout); renderPosters(); }); });
-        
-        els.saveProjectBtn.addEventListener('click', saveCurrentProject);
-        
         function renderPosters() {
             els.previewContainer.innerHTML = ''; const s = state.settings; const root = document.documentElement;
             root.style.setProperty('--font-family', s.fontFamily); root.style.setProperty('--prod-color', s.prodColor); root.style.setProperty('--price-color', s.priceColor);
@@ -933,7 +1018,7 @@
             pages.forEach((pageItems) => {
                 const pageDiv = document.createElement('div'); pageDiv.className = `a4-page layout-${s.layout}`;
                 pageItems.forEach((prod) => {
-                    // Segurança de Dados
+                    // Segurança Defensiva para campos de arrasto não inicializados
                     if (!prod.nameTransform) prod.nameTransform = { x: 0, y: 0, scale: 1 };
                     if (!prod.priceTransform) prod.priceTransform = { x: 0, y: 0, scale: 1 };
                     if (!prod.priceRegularTransform) prod.priceRegularTransform = { x: 0, y: 0, scale: 1 };
@@ -942,6 +1027,7 @@
                     const nameSize = pBase * prod.nameTransform.scale;
                     const priceSize = prBase * prod.priceTransform.scale;
                     const priceRegSize = (prBase * 0.40) * (s.priceRegFontScale / 100) * prod.priceRegularTransform.scale;
+                    const globalClubScale = (s.clubLogoScale || 100) / 100;
                     
                     const priceF = splitPrice(prod.price);
                     
@@ -949,33 +1035,39 @@
                     let mainPricePrefix = '';
                     let clubLogoHTML = '';
 
+                    // NOVA ABORDAGEM FLEXBOX - TABELA DE PREÇOS NATIVA PARA IMPRESSÃO PERFEITA NO PDF
                     if (s.promoType === 'club' || s.promoType === 'from_to') {
                         const textTop = s.promoType === 'club' ? s.textClubNormal : s.textPromoDe;
                         const textBottom = s.promoType === 'club' ? s.textClubPromo : s.textPromoPor;
                         
-                        secondaryPriceHTML = `
-                        <div class="editable-element" data-index="${globalIndex}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${priceRegSize}rem; width: 100%; text-align: center; margin-top: 10px; font-family: var(--font-family); font-weight: 900; z-index: 10;">
-                            <div style="font-size: 0.6em; color: ${s.priceRegColor}; font-weight: 900; text-transform: uppercase; line-height: 1; margin-bottom: 2px;">${textTop}</div>
-                            <div style="color: ${s.priceRegColor}; font-weight: 900; line-height: 1;">${prod.priceRegular || ''}</div>
-                            <div class="element-resize-handle no-print"></div>
-                        </div>`;
+                        // Não há mais o corte (line-through) no preço antigo, como solicitado.
+                        if (prod.priceRegular) {
+                            secondaryPriceHTML = `
+                            <div class="editable-element" data-index="${globalIndex}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${priceRegSize}rem; color: ${s.priceRegColor}; line-height: 1.1; margin-bottom: 10px; z-index: 10;">
+                                <div style="font-size: 0.5em; text-align: center; margin-bottom: 2px;">${textTop}</div>
+                                <div style="text-align: center;">R$ ${prod.priceRegular}</div>
+                                <div class="element-resize-handle no-print"></div>
+                            </div>`;
+                        }
 
-                        // Nova lógica do Logo de Clube vs Texto
+                        // Lógica da Imagem do Clube Substituindo o Texto
                         if (s.promoType === 'club' && state.clubLogoImg) {
+                            const finalClubScale = 1 * prod.clubLogoTransform.scale * globalClubScale;
                             clubLogoHTML = `
-                            <div class="editable-element" data-index="${globalIndex}" data-type="clubLogo" style="transform: translate(${prod.clubLogoTransform.x}px, ${prod.clubLogoTransform.y}px); font-size: ${1 * prod.clubLogoTransform.scale}rem; margin-top: 8px; margin-bottom: -4px; z-index: 15; display: flex; justify-content: center; width: 100%;">
+                            <div class="editable-element" data-index="${globalIndex}" data-type="clubLogo" style="transform: translate(${prod.clubLogoTransform.x}px, ${prod.clubLogoTransform.y}px); font-size: ${finalClubScale}rem; margin-top: 8px; margin-bottom: -4px; z-index: 15; display: flex; justify-content: center; width: 100%;">
                                 <img src="${state.clubLogoImg}" style="width: 8em; height: auto; object-fit: contain; pointer-events: none;" alt="Clube">
                                 <div class="element-resize-handle no-print"></div>
                             </div>`;
-                            mainPricePrefix = '';
+                            mainPricePrefix = ''; // Oculta o texto
                         } else {
-                            mainPricePrefix = `<tr><td colspan="3" style="text-align: center; font-size: 0.35em; color: var(--price-color); font-weight: 900; text-transform: uppercase; padding-bottom: 5px;">${textBottom}</td></tr>`;
+                            mainPricePrefix = `<div style="font-size: 0.4em; text-align: center; margin-bottom: 2px; line-height: 1;">${textBottom}</div>`;
                         }
                     }
-                    
-                    pageDiv.innerHTML += `<div class="poster">${logoHTML}${headerHTML}
-                        <div class="poster-body" style="font-family: var(--font-family);">
-                            <div class="product-name editable-element" data-index="${globalIndex}" data-type="name" style="transform: translate(${prod.nameTransform.x}px, ${prod.nameTransform.y}px); font-size: ${nameSize}rem; font-family: var(--font-family); font-weight: 900;">
+
+                    pageDiv.innerHTML += `
+                    <div class="poster">${logoHTML}${headerHTML}
+                        <div class="poster-body">
+                            <div class="product-name editable-element" data-index="${globalIndex}" data-type="name" style="transform: translate(${prod.nameTransform.x}px, ${prod.nameTransform.y}px); font-size: ${nameSize}rem;">
                                 ${prod.name}
                                 <div class="element-resize-handle no-print"></div>
                             </div>
@@ -983,18 +1075,19 @@
                             ${secondaryPriceHTML}
                             ${clubLogoHTML}
                             
-                            <div class="product-price editable-element" data-index="${globalIndex}" data-type="price" style="transform: translate(${prod.priceTransform.x}px, ${prod.priceTransform.y}px); font-size: ${priceSize}rem; color: var(--price-color); font-family: var(--font-family); font-weight: 900; z-index: 10;">
-                                <table cellpadding="0" cellspacing="0" style="margin: 0 auto; border-collapse: collapse; line-height: 1;">
-                                    ${mainPricePrefix}
+                            <div class="product-price editable-element" data-index="${globalIndex}" data-type="price" style="transform: translate(${prod.priceTransform.x}px, ${prod.priceTransform.y}px); font-size: ${priceSize}rem;">
+                                ${mainPricePrefix}
+                                <table style="margin: 0 auto; border-collapse: collapse;">
                                     <tr>
-                                        <td style="vertical-align: top; font-size: 0.4em; padding-top: 0.15em; padding-right: 0.05em; font-weight: 900;">R$</td>
-                                        <td style="vertical-align: top; font-size: 1em; font-weight: 900; line-height: 0.8;">${priceF.intPart}</td>
-                                        <td style="vertical-align: top; font-size: 0.5em; padding-top: 0.1em; padding-left: 0.05em; font-weight: 900;">${priceF.decPart}</td>
+                                        <td style="vertical-align: top; padding-top: 0.15em; padding-right: 0.05em; font-size: 0.4em; text-align: right;">R$</td>
+                                        <td style="vertical-align: top; line-height: 0.75; text-align: center;">${priceF.intPart}</td>
+                                        <td style="vertical-align: top; padding-top: 0.15em; font-size: 0.5em; text-align: left;">${priceF.decPart}</td>
                                     </tr>
                                 </table>
                                 <div class="element-resize-handle no-print"></div>
                             </div>
-                        </div>${footerHTML}</div>`;
+                        </div>${footerHTML}
+                    </div>`;
                     globalIndex++;
                 });
                 for (let j = 0; j < s.layout - pageItems.length; j++) pageDiv.innerHTML += `<div class="poster flex items-center justify-center opacity-30"></div>`;
@@ -1003,9 +1096,7 @@
         }
 
         let isDraggingLogo = false, isResizingLogo = false, startMouseX, startMouseY, startLogoX, startLogoY, startLogoW, activePoster = null;
-        let isDraggingElement = false, isResizingElement = false;
-        let activeElIndex = -1, activeElType = null, activeDomElement = null;
-        let startElX, startElY, startElScale;
+        let isDraggingElement = false, isResizingElement = false, activeElIndex = -1, activeElType = null, activeDomElement = null, startElX, startElY, startElScale;
 
         document.addEventListener('mousedown', (e) => {
             const elResizeHandle = e.target.closest('.element-resize-handle');
@@ -1028,28 +1119,24 @@
 
         document.addEventListener('mousemove', (e) => {
             if (isDraggingElement && activeDomElement) {
-                const dx = e.clientX - startMouseX, dy = e.clientY - startMouseY;
-                const newX = startElX + dx, newY = startElY + dy;
+                const newX = startElX + (e.clientX - startMouseX); const newY = startElY + (e.clientY - startMouseY);
                 state.products[activeElIndex][activeElType + 'Transform'].x = newX; state.products[activeElIndex][activeElType + 'Transform'].y = newY;
                 activeDomElement.style.transform = `translate(${newX}px, ${newY}px)`; return;
             }
-            
             if (isResizingElement && activeDomElement) {
-                const dx = e.clientX - startMouseX;
-                const scaleDelta = dx / 100;
-                let newScale = startElScale + scaleDelta;
+                let newScale = startElScale + ((e.clientX - startMouseX) / 100);
                 if (newScale < 0.2) newScale = 0.2; if (newScale > 4.0) newScale = 4.0; 
                 state.products[activeElIndex][activeElType + 'Transform'].scale = newScale;
                 
-                const s = state.settings; let pBase, prBase;
-                if (s.layout === 1) { pBase = 4.0; prBase = 12.0; } else if (s.layout === 2) { pBase = 3.0; prBase = 8.5; } else { pBase = 2.0; prBase = 5.5; }
-                pBase *= (s.prodFontScale / 100); prBase *= (s.priceFontScale / 100);
+                const s = state.settings;
+                let pBase = (s.layout === 1 ? 4.0 : (s.layout === 2 ? 3.0 : 2.0)) * (s.prodFontScale / 100);
+                let prBase = (s.layout === 1 ? 12.0 : (s.layout === 2 ? 8.5 : 5.5)) * (s.priceFontScale / 100);
                 
                 let baseSize;
                 if (activeElType === 'name') baseSize = pBase;
                 else if (activeElType === 'price') baseSize = prBase;
                 else if (activeElType === 'priceRegular') baseSize = (prBase * 0.40) * (s.priceRegFontScale / 100);
-                else if (activeElType === 'clubLogo') baseSize = 1;
+                else if (activeElType === 'clubLogo') baseSize = 1 * ((s.clubLogoScale || 100) / 100);
 
                 activeDomElement.style.fontSize = `${baseSize * newScale}rem`; return;
             }
@@ -1069,15 +1156,38 @@
             }
         });
         
-        document.addEventListener('mouseup', () => { 
-            isDraggingLogo = false; isResizingLogo = false; activePoster = null; 
-            isDraggingElement = false; isResizingElement = false; activeDomElement = null;
+        document.addEventListener('mouseup', () => { isDraggingLogo = false; isResizingLogo = false; activePoster = null; isDraggingElement = false; isResizingElement = false; activeDomElement = null; });
+
+        els.addManualBtn.addEventListener('click', () => {
+            const name = els.manualProdName.value.trim(), price = els.manualProdPrice.value.trim(), priceReg = els.manualProdPriceRegular.value.trim();
+            if (!name || !price) return showToast("Preencha nome e preço.", "error");
+            state.products.push({ 
+                name: name.toUpperCase(), price: formatPrice(price), priceRegular: state.settings.promoType !== 'normal' && priceReg ? formatPrice(priceReg) : '',
+                nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, clubLogoTransform: { x: 0, y: 0, scale: 1 } 
+            });
+            els.manualProdName.value = ''; els.manualProdPrice.value = ''; els.manualProdPriceRegular.value = ''; els.manualProdName.focus(); renderPosters(); showToast("Inserido!", "success");
         });
 
-        els.printBtn.addEventListener('click', () => {
-            if(state.products.length === 0) return showToast("Adicione produtos antes de imprimir!", "error");
-            window.print();
-        });
+        els.clearLogoBtn.addEventListener('click', () => { state.logoImg = null; els.logoUpload.value = ''; els.clearLogoBtn.classList.add('hidden'); renderPosters(); });
+        els.clearClubLogoBtn.addEventListener('click', () => { state.clubLogoImg = null; els.clubLogoUpload.value = ''; els.clearClubLogoBtn.classList.add('hidden'); renderPosters(); });
+
+        els.headerUpload.addEventListener('change', (e) => handleImageUpload(e, 'headerImg')); els.footerUpload.addEventListener('change', (e) => handleImageUpload(e, 'footerImg')); els.logoUpload.addEventListener('change', (e) => handleImageUpload(e, 'logoImg')); els.clubLogoUpload.addEventListener('change', (e) => handleImageUpload(e, 'clubLogoImg')); els.excelUpload.addEventListener('change', handleExcelUpload);
+        els.posterBgColor.addEventListener('input', (e) => { state.settings.posterBgColor = e.target.value; renderPosters(); });
+        els.autoHeaderBg.addEventListener('input', (e) => { state.settings.autoThemeHeaderBg = e.target.value; renderPosters(); });
+        els.autoTextColor.addEventListener('input', (e) => { state.settings.autoThemeTextColor = e.target.value; renderPosters(); });
+        els.autoFooterBg.addEventListener('input', (e) => { state.settings.autoThemeFooterBg = e.target.value; renderPosters(); });
+        els.autoThemeText.addEventListener('input', (e) => { state.settings.autoThemeText = e.target.value.toUpperCase(); renderPosters(); });
+        els.autoThemeSecondaryText.addEventListener('input', (e) => { state.settings.autoThemeSecondaryText = e.target.value.toUpperCase(); renderPosters(); });
+        els.fontFamily.addEventListener('change', (e) => { state.settings.fontFamily = e.target.value; renderPosters(); });
+        els.prodColor.addEventListener('input', (e) => { state.settings.prodColor = e.target.value; renderPosters(); });
+        els.priceColor.addEventListener('input', (e) => { state.settings.priceColor = e.target.value; renderPosters(); });
+        els.prodFontSizeScale.addEventListener('input', (e) => { state.settings.prodFontScale = parseInt(e.target.value); els.prodFontSizeDisplay.textContent = `${state.settings.prodFontScale}%`; renderPosters(); });
+        els.priceFontSizeScale.addEventListener('input', (e) => { state.settings.priceFontScale = parseInt(e.target.value); els.priceFontSizeDisplay.textContent = `${state.settings.priceFontScale}%`; renderPosters(); });
+        els.layoutBtns.forEach(btn => { btn.addEventListener('click', (e) => { els.layoutBtns.forEach(b => { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); }); e.currentTarget.classList.remove('border-gray-300', 'bg-white', 'text-gray-600', 'border'); e.currentTarget.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); state.settings.layout = parseInt(e.currentTarget.dataset.layout); renderPosters(); }); });
+        
+        els.saveProjectBtn.addEventListener('click', saveCurrentProject);
+        
+        els.printBtn.addEventListener('click', () => { if(state.products.length === 0) return showToast("Adicione produtos antes de gerar PDF!", "error"); window.print(); });
 
         window.addEventListener('DOMContentLoaded', () => { renderPosters(); });
     </script>

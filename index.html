@@ -224,7 +224,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
 
-        /* CSS NATIVO DE IMPRESSÃO */
+        /* CSS NATIVO DE IMPRESSÃO - CORREÇÃO DA MÚLTIPLA PÁGINA */
         @media print {
             .no-print { display: none !important; }
             .no-print-bg { background: none !important; }
@@ -234,7 +234,9 @@
             .editable-element { border: none !important; }
             .element-resize-handle { display: none !important; }
 
+            /* FORÇAR DISPLAY BLOCK - Isso resolve o corte de páginas no PDF */
             body, html {
+                display: block !important;
                 height: auto !important; 
                 min-height: 100% !important;
                 margin: 0 !important;
@@ -244,6 +246,7 @@
             }
 
             main {
+                display: block !important;
                 height: auto !important;
                 overflow: visible !important;
                 position: static !important;
@@ -252,10 +255,10 @@
             }
 
             .preview-container {
+                display: block !important;
                 padding: 0 !important;
                 margin: 0 !important;
                 gap: 0;
-                display: block; 
                 overflow: visible !important;
             }
 
@@ -263,6 +266,14 @@
                 box-shadow: none !important;
                 margin: 0 !important;
                 border: none !important;
+                /* Assegura a quebra após a página no PDF */
+                page-break-after: always !important;
+                break-after: page !important;
+            }
+
+            .a4-page:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
             }
 
             #toastContainer { display: none !important; }
@@ -311,7 +322,6 @@
         </div>
 
         <div class="p-6 flex flex-col gap-6 flex-grow">
-            <!-- SEÇÃO 1: VISUAL DO CARTAZ -->
             <div class="space-y-4">
                 <h2 class="text-lg font-bold text-gray-800 border-b pb-2">1. Visual do Cartaz</h2>
                 
@@ -614,6 +624,7 @@
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // As chaves do Firebase originais mantidas
         const firebaseConfig = {
             apiKey: "AIzaSyDB81varVquhypzkLfbf6bf2RiNX4fcPL4",
             authDomain: "promoprint-maker.firebaseapp.com",
@@ -1018,7 +1029,6 @@
             pages.forEach((pageItems) => {
                 const pageDiv = document.createElement('div'); pageDiv.className = `a4-page layout-${s.layout}`;
                 pageItems.forEach((prod) => {
-                    // Segurança Defensiva para campos de arrasto não inicializados
                     if (!prod.nameTransform) prod.nameTransform = { x: 0, y: 0, scale: 1 };
                     if (!prod.priceTransform) prod.priceTransform = { x: 0, y: 0, scale: 1 };
                     if (!prod.priceRegularTransform) prod.priceRegularTransform = { x: 0, y: 0, scale: 1 };
@@ -1035,22 +1045,22 @@
                     let mainPricePrefix = '';
                     let clubLogoHTML = '';
 
-                    // NOVA ABORDAGEM FLEXBOX - TABELA DE PREÇOS NATIVA PARA IMPRESSÃO PERFEITA NO PDF
+                    // MODELO DA IMPRESSÃO PERFEITA NO PDF
                     if (s.promoType === 'club' || s.promoType === 'from_to') {
                         const textTop = s.promoType === 'club' ? s.textClubNormal : s.textPromoDe;
                         const textBottom = s.promoType === 'club' ? s.textClubPromo : s.textPromoPor;
                         
-                        // Não há mais o corte (line-through) no preço antigo, como solicitado.
+                        // Sem risco no preço normal.
                         if (prod.priceRegular) {
                             secondaryPriceHTML = `
                             <div class="editable-element" data-index="${globalIndex}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${priceRegSize}rem; color: ${s.priceRegColor}; line-height: 1.1; margin-bottom: 10px; z-index: 10;">
                                 <div style="font-size: 0.5em; text-align: center; margin-bottom: 2px;">${textTop}</div>
-                                <div style="text-align: center;">R$ ${prod.priceRegular}</div>
+                                <div style="text-align: center; font-weight: 900;">R$ ${prod.priceRegular}</div>
                                 <div class="element-resize-handle no-print"></div>
                             </div>`;
                         }
 
-                        // Lógica da Imagem do Clube Substituindo o Texto
+                        // Lógica da Imagem do Clube
                         if (s.promoType === 'club' && state.clubLogoImg) {
                             const finalClubScale = 1 * prod.clubLogoTransform.scale * globalClubScale;
                             clubLogoHTML = `
@@ -1058,12 +1068,13 @@
                                 <img src="${state.clubLogoImg}" style="width: 8em; height: auto; object-fit: contain; pointer-events: none;" alt="Clube">
                                 <div class="element-resize-handle no-print"></div>
                             </div>`;
-                            mainPricePrefix = ''; // Oculta o texto
+                            mainPricePrefix = ''; 
                         } else {
                             mainPricePrefix = `<div style="font-size: 0.4em; text-align: center; margin-bottom: 2px; line-height: 1;">${textBottom}</div>`;
                         }
                     }
 
+                    // TABELA INFALÍVEL - Impede R$ Flutuante
                     pageDiv.innerHTML += `
                     <div class="poster">${logoHTML}${headerHTML}
                         <div class="poster-body">

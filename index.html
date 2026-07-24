@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Cartazes de Supermercado</title>
+    <title>TESTE - Gerador de Cartazes de Supermercado</title>
     <!-- Tailwind CSS para Estilização da Interface -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS para ler arquivos Excel -->
@@ -160,12 +160,16 @@
             }
 
             #toastContainer { display: none !important; }
-
-            @page { margin: 0; }
         }
     </style>
+    <!-- Estilo Dinâmico para resolver a mistura de orientações em Impressões Múltiplas -->
     <style id="dynamicPrintStyle">
-        @page { size: A4 portrait; margin: 0; }
+        @page { margin: 0; }
+        @page portrait_page { size: A4 portrait; margin: 0; }
+        @page landscape_page { size: A4 landscape; margin: 0; }
+        .layout-1 { page: portrait_page; }
+        .layout-2 { page: landscape_page; }
+        .layout-4 { page: portrait_page; }
     </style>
 </head>
 <body class="h-screen flex flex-col md:flex-row overflow-hidden relative">
@@ -302,9 +306,10 @@
                 </div>
 
                 <div class="bg-green-50 p-3 rounded-md border border-green-200 shadow-sm">
-                    <label class="block text-sm font-bold text-green-800 mb-1">Importar Planilha (.xlsx, .csv)</label>
+                    <label class="block text-sm font-bold text-green-800 mb-1">Importar Planilha Inteligente (.xlsx, .csv)</label>
                     <div id="excelInstructions" class="text-[10px] text-green-700 mb-2 bg-green-100 p-1.5 rounded transition-all">
-                        Colunas obrigatórias: <b>1ª Produto</b> | <b>2ª Preço</b>
+                        <b>Modo Simples:</b> Produto | Preço <br>
+                        <b>Modo Inteligente (Auto-Layout):</b> Use as colunas "Grande", "Médio" e "Pequeno" com quantidades.
                     </div>
                     <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-green-700 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-green-600 file:text-white hover:file:bg-green-700 cursor-pointer">
                 </div>
@@ -350,7 +355,7 @@
                     <label class="block text-xs font-bold text-indigo-800 mb-2 border-b border-indigo-200 pb-1">Ajustes Preço Anterior / Clube</label>
                     
                     <div id="clubLogoControl" class="hidden mb-3 border-b border-indigo-200 pb-3 mt-2">
-                        <label class="block text-[10px] font-bold text-gray-700 mb-1">Logo do Clube (Substitui Texto)</label>
+                        <label class="block text-[10px] font-bold text-gray-700 mb-1">Logo do Clube (Substitui Texto 2)</label>
                         <input type="file" id="clubLogoUpload" accept="image/*" class="block w-full text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:font-bold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
                         <button id="clearClubLogoBtn" class="text-[10px] font-bold text-red-500 hover:text-red-700 mt-1 hidden underline">Remover Logo do Clube</button>
                         
@@ -360,7 +365,7 @@
                         </div>
                     </div>
 
-                    <!-- Campos de Texto do Clube (mantidos editáveis) -->
+                    <!-- Campos de Texto do Clube -->
                     <div id="clubTextControl" class="hidden grid grid-cols-2 gap-2 mt-2">
                         <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 1 (Clube)</label><input type="text" id="textClubNormal" value="CLIENTE" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
                         <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 2 (Clube)</label><input type="text" id="textClubPromo" value="CLUBE" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
@@ -382,7 +387,7 @@
             <div class="space-y-4">
                 <h2 class="text-lg font-bold text-gray-800 border-b pb-2">4. Saída e Layout</h2>
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Cartazes por Folha A4</label>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Cartazes por Folha A4 (Padrão)</label>
                     <div class="grid grid-cols-3 gap-2 mt-2">
                         <button class="layout-btn border-2 border-blue-600 bg-blue-50 text-blue-700 rounded py-2 font-black text-lg" data-layout="1">1</button>
                         <button class="layout-btn border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 rounded py-2 font-black text-lg" data-layout="2">2</button>
@@ -646,10 +651,8 @@
             const type = els.promoType.value; state.settings.promoType = type;
             if (type === 'normal') {
                 els.manualProdPriceRegular.classList.add('hidden'); els.manualProdPrice.classList.replace('w-1/2', 'w-full'); els.promoSettings.classList.add('hidden');
-                els.excelInstructions.innerHTML = 'Colunas obrigatórias: <b>1ª Produto</b> | <b>2ª Preço</b>';
             } else {
                 els.manualProdPriceRegular.classList.remove('hidden'); els.manualProdPrice.classList.replace('w-full', 'w-1/2'); els.promoSettings.classList.remove('hidden');
-                els.excelInstructions.innerHTML = 'Obrigatórias: <b>1ª Prod</b> | <b>2ª Preço Normal/De</b> | <b>3ª Preço Promo</b>';
                 if (type === 'club') { 
                     els.dePorTextControl.classList.add('hidden'); 
                     els.clubLogoControl.classList.remove('hidden'); 
@@ -691,20 +694,64 @@
             }; reader.readAsDataURL(file);
         }
 
+        // NOVO: Leitura de Excel com Inteligência de Automação de Layout
         function handleExcelUpload(e) {
             const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
             reader.onload = (event) => {
-                const data = new Uint8Array(event.target.result); const workbook = XLSX.read(data, {type: 'array'}); const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 }); const parsedProducts = [];
-                for (let i = 1; i < json.length; i++) {
-                    const row = json[i]; 
-                    if (row && row[0] && row[1]) {
-                        parsedProducts.push({ 
-                            name: String(row[0]).trim(), price: formatPrice(row[1]), priceRegular: row[2] ? formatPrice(row[2]) : "",
+                const data = new Uint8Array(event.target.result); const workbook = XLSX.read(data, {type: 'array'}); 
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                
+                let importedCount = 0;
+                const firstRow = json[0] || {};
+                const keys = Object.keys(firstRow).map(k => k.toLowerCase());
+                
+                // MÁGICA: Detecta se é a planilha avançada
+                const isSmart = keys.some(k => ['grande', 'médio', 'medio', 'pequeno'].includes(k));
+
+                if (isSmart) {
+                    json.forEach(row => {
+                        const getVal = (possibleKeys) => {
+                            const key = Object.keys(row).find(k => possibleKeys.includes(k.toLowerCase()));
+                            return key ? row[key] : undefined;
+                        };
+                        const name = String(getVal(['produto', 'nome', 'descrição', 'descricao']) || '').trim();
+                        if(!name) return;
+                        
+                        const price = formatPrice(getVal(['preço 1', 'preço promo', 'promo', 'por', 'preço', 'preco']));
+                        const priceReg = formatPrice(getVal(['preço 2', 'preço normal', 'de', 'normal']));
+                        
+                        const qG = parseInt(getVal(['grande'])) || 0;
+                        const qM = parseInt(getVal(['médio', 'medio'])) || 0;
+                        const qP = parseInt(getVal(['pequeno'])) || 0;
+                        
+                        const createProd = (lSize) => ({
+                            name: name.toUpperCase(), price, priceRegular: priceReg, forcedLayout: lSize,
                             nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 }
                         });
+
+                        for(let i=0; i<qG; i++) { state.products.push(createProd(1)); importedCount++; }
+                        for(let i=0; i<qM; i++) { state.products.push(createProd(2)); importedCount++; }
+                        for(let i=0; i<qP; i++) { state.products.push(createProd(4)); importedCount++; }
+                    });
+                    if(importedCount > 0) showToast(`${importedCount} cartazes gerados via Planilha Inteligente!`, "success");
+                } else {
+                    // Modo de importação clássico/simples
+                    const jsonArr = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+                    for (let i = 1; i < jsonArr.length; i++) {
+                        const row = jsonArr[i]; 
+                        if (row && row[0] && row[1]) {
+                            state.products.push({ 
+                                name: String(row[0]).trim().toUpperCase(), price: formatPrice(row[1]), priceRegular: row[2] ? formatPrice(row[2]) : "", forcedLayout: null,
+                                nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 }
+                            });
+                            importedCount++;
+                        }
                     }
+                    if(importedCount > 0) showToast(`${importedCount} produtos importados (Modo Simples)!`, "success");
                 }
-                if (parsedProducts.length > 0) { state.products = state.products.concat(parsedProducts); renderPosters(); showToast(`${parsedProducts.length} produtos importados!`, "success"); } else showToast("Nenhum produto válido encontrado.", "error");
+                
+                if(importedCount === 0) showToast("Nenhum produto válido encontrado.", "error");
+                renderPosters(); 
                 e.target.value = ''; 
             }; reader.readAsArrayBuffer(file);
         }
@@ -717,37 +764,65 @@
             let headerHTML = ''; let footerHTML = '';
             const logoHTML = state.logoImg ? `<div class="logo-container"><img src="${state.logoImg}" class="poster-logo" alt="Logo"><div class="resize-handle"></div></div>` : '';
 
-            let pBase, prBase, tBase, sBase;
-            if (s.layout === 1) { pBase = 4.0; prBase = 12.0; tBase = 4.5; sBase = 2.0; } 
-            else if (s.layout === 2) { pBase = 3.0; prBase = 8.5; tBase = 3.0; sBase = 1.3; } 
-            else { pBase = 2.0; prBase = 5.5; tBase = 2.0; sBase = 1.0; }
-
-            pBase *= (s.prodFontScale / 100); prBase *= (s.priceFontScale / 100); tBase *= (s.autoTitleScale / 100); sBase *= (s.autoSubScale / 100);
-
             if (s.themeMode === 'image') {
                 headerHTML = state.headerImg ? `<img src="${state.headerImg}" class="poster-header" alt="Cabeçalho">` : '';
                 footerHTML = state.footerImg ? `<img src="${state.footerImg}" class="poster-footer" alt="Rodapé">` : '';
             } else {
-                headerHTML = `<div class="poster-header-auto" style="background-color: ${s.autoThemeHeaderBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${tBase}rem;">${s.autoThemeText}</span></div>`;
-                footerHTML = `<div class="poster-footer-auto" style="background-color: ${s.autoThemeFooterBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${sBase}rem;">${s.autoThemeSecondaryText}</span></div>`;
+                const tBaseAuto = 4.5 * (s.autoTitleScale / 100); const sBaseAuto = 2.0 * (s.autoSubScale / 100);
+                headerHTML = `<div class="poster-header-auto" style="background-color: ${s.autoThemeHeaderBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${tBaseAuto}rem;">${s.autoThemeText}</span></div>`;
+                footerHTML = `<div class="poster-footer-auto" style="background-color: ${s.autoThemeFooterBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${sBaseAuto}rem;">${s.autoThemeSecondaryText}</span></div>`;
             }
 
             if (state.products.length === 0) {
-                els.pageCountDisplay.textContent = `Páginas: 0`; els.dynamicPrintStyle.innerHTML = "@page { size: A4 portrait; margin: 0; }";
+                els.pageCountDisplay.textContent = `Páginas: 0`; els.dynamicPrintStyle.innerHTML = "@page { margin: 0; }";
                 els.previewContainer.innerHTML = `<div class="a4-page layout-1"><div class="poster">${logoHTML}${headerHTML}<div class="poster-body text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg><p class="font-bold text-xl mb-1">Vazio</p></div>${footerHTML}</div></div>`;
                 return;
             }
 
-            els.dynamicPrintStyle.innerHTML = s.layout === 2 ? "@page { size: A4 landscape; margin: 0; }" : "@page { size: A4 portrait; margin: 0; }";
+            // ATUALIZAÇÃO: @page aceita nomeações para misturar folhas Retrato e Paisagem na mesma impressão nativa do Chrome!
+            els.dynamicPrintStyle.innerHTML = `
+                @page { margin: 0; }
+                @page portrait_page { size: A4 portrait; margin: 0; }
+                @page landscape_page { size: A4 landscape; margin: 0; }
+                .layout-1 { page: portrait_page; }
+                .layout-2 { page: landscape_page; }
+                .layout-4 { page: portrait_page; }
+            `;
             
-            const pages = []; for (let i = 0; i < state.products.length; i += s.layout) pages.push(state.products.slice(i, i + s.layout));
+            const pages = []; 
+            const layout1Items = []; const layout2Items = []; const layout4Items = [];
+
+            // Separação em Filas para Auto-Layout
+            state.products.forEach((prod, originalIndex) => {
+                const targetLayout = prod.forcedLayout || s.layout;
+                const item = { prod, originalIndex, currentLayout: targetLayout };
+                if (targetLayout === 1) layout1Items.push(item);
+                else if (targetLayout === 2) layout2Items.push(item);
+                else if (targetLayout === 4) layout4Items.push(item);
+            });
+
+            for (let i = 0; i < layout1Items.length; i += 1) pages.push(layout1Items.slice(i, i + 1));
+            for (let i = 0; i < layout2Items.length; i += 2) pages.push(layout2Items.slice(i, i + 2));
+            for (let i = 0; i < layout4Items.length; i += 4) pages.push(layout4Items.slice(i, i + 4));
+
             els.pageCountDisplay.textContent = `Páginas: ${pages.length}`;
 
-            let globalIndex = 0;
             pages.forEach((pageItems) => {
-                const pageDiv = document.createElement('div'); pageDiv.className = `a4-page layout-${s.layout}`;
-                pageItems.forEach((prod) => {
-                    // Prevenção inteligente (assegurando que todas as transformações existam)
+                const pageLayout = pageItems[0].currentLayout;
+                
+                let pBase, prBase;
+                if (pageLayout === 1) { pBase = 4.0; prBase = 12.0; } 
+                else if (pageLayout === 2) { pBase = 3.0; prBase = 8.5; } 
+                else { pBase = 2.0; prBase = 5.5; }
+
+                pBase *= (s.prodFontScale / 100); prBase *= (s.priceFontScale / 100);
+
+                const pageDiv = document.createElement('div'); pageDiv.className = `a4-page layout-${pageLayout}`;
+                
+                pageItems.forEach((item) => {
+                    const prod = item.prod;
+                    const oIdx = item.originalIndex; // Index blindado para o mouse drag não se perder
+
                     if (!prod.nameTransform) prod.nameTransform = { x: 0, y: 0, scale: 1 }; 
                     if (!prod.priceTransform) prod.priceTransform = { x: 0, y: 0, scale: 1 }; 
                     if (!prod.priceRegularTransform) prod.priceRegularTransform = { x: 0, y: 0, scale: 1 };
@@ -760,7 +835,6 @@
                     let priceRegularHTML = ''; 
                     let prefixHTML = '';
                     
-                    // Lógica para Blocos Independentes: Clube / De Por
                     if (s.promoType === 'club' || s.promoType === 'from_to') {
                         const textTop = s.promoType === 'club' ? s.textClubNormal : s.textPromoDe;
                         const textBottom = s.promoType === 'club' ? s.textClubPromo : s.textPromoPor;
@@ -768,16 +842,14 @@
                         const prRegSize = (prBase * 0.40) * (s.priceRegularFontScale / 100) * prod.priceRegularTransform.scale;
                         const prefixSize = (prBase * 0.40) * prod.prefixTransform.scale;
                         
-                        // BLOCO 1: Preço Normal (De ou Cliente)
                         priceRegularHTML = `
-                            <div class="editable-element" data-index="${globalIndex}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${prRegSize}rem; color: ${s.priceRegularColor}; text-align: center; width: 100%; font-weight: 900; line-height: 1; text-transform: uppercase;">
+                            <div class="editable-element" data-index="${oIdx}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${prRegSize}rem; color: ${s.priceRegularColor}; text-align: center; width: 100%; font-weight: 900; line-height: 1; text-transform: uppercase;">
                                 <div style="margin-bottom: 2px;">${textTop}</div>
                                 <div>R$ ${prod.priceRegular}</div>
                                 <div class="element-resize-handle no-print"></div>
                             </div>
                         `;
                         
-                        // BLOCO 2: Prefixo (Logo Clube ou Texto Por/Clube)
                         let clubLogoEl = '';
                         if (s.promoType === 'club' && state.clubLogoImg) {
                             const logoW = 100 * (s.clubLogoGlobalScale / 100);
@@ -787,18 +859,17 @@
                         }
 
                         prefixHTML = `
-                            <div class="editable-element" data-index="${globalIndex}" data-type="prefix" style="transform: translate(${prod.prefixTransform.x}px, ${prod.prefixTransform.y}px); font-size: ${prefixSize}rem; color: ${s.priceColor}; text-align: center; width: 100%; margin-top: 10px; margin-bottom: 4px; display: flex; justify-content: center; font-weight: 900;">
+                            <div class="editable-element" data-index="${oIdx}" data-type="prefix" style="transform: translate(${prod.prefixTransform.x}px, ${prod.prefixTransform.y}px); font-size: ${prefixSize}rem; color: ${s.priceColor}; text-align: center; width: 100%; margin-top: 10px; margin-bottom: 4px; display: flex; justify-content: center; font-weight: 900;">
                                 ${clubLogoEl}
                                 <div class="element-resize-handle no-print"></div>
                             </div>
                         `;
                     }
 
-                    // BLOCO PRINCIPAL INQUEBRÁVEL - Bold Forçado (900)
                     pageDiv.innerHTML += `<div class="poster">${logoHTML}${headerHTML}
                         <div class="poster-body" style="padding: 2%;">
                             
-                            <div class="product-name editable-element" data-index="${globalIndex}" data-type="name" style="transform: translate(${prod.nameTransform.x}px, ${prod.nameTransform.y}px); font-size: ${nameSize}rem; font-weight: 900;">
+                            <div class="product-name editable-element" data-index="${oIdx}" data-type="name" style="transform: translate(${prod.nameTransform.x}px, ${prod.nameTransform.y}px); font-size: ${nameSize}rem; font-weight: 900;">
                                 ${prod.name}
                                 <div class="element-resize-handle no-print"></div>
                             </div>
@@ -806,7 +877,7 @@
                             ${priceRegularHTML}
                             ${prefixHTML}
                             
-                            <div class="product-price editable-element" data-index="${globalIndex}" data-type="price" style="transform: translate(${prod.priceTransform.x}px, ${prod.priceTransform.y}px); font-size: ${priceSize}rem; color: ${s.priceColor}; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <div class="product-price editable-element" data-index="${oIdx}" data-type="price" style="transform: translate(${prod.priceTransform.x}px, ${prod.priceTransform.y}px); font-size: ${priceSize}rem; color: ${s.priceColor}; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                                 <table style="border-collapse: collapse; margin: 0 auto; line-height: 0.8;">
                                     <tr>
                                         <td style="vertical-align: top; font-size: 0.4em; font-weight: 900; padding-top: 0.15em; padding-right: 2px;">R$</td>
@@ -817,9 +888,8 @@
                                 <div class="element-resize-handle no-print"></div>
                             </div>
                         </div>${footerHTML}</div>`;
-                    globalIndex++;
                 });
-                for (let j = 0; j < s.layout - pageItems.length; j++) pageDiv.innerHTML += `<div class="poster flex items-center justify-center opacity-30"></div>`;
+                for (let j = 0; j < pageLayout - pageItems.length; j++) pageDiv.innerHTML += `<div class="poster flex items-center justify-center opacity-30"></div>`;
                 els.previewContainer.appendChild(pageDiv);
             });
         }
@@ -845,8 +915,11 @@
             if (isResizingElement && activeDomElement) {
                 let newScale = startElScale + ((e.clientX - startMouseX) / 100); if (newScale < 0.2) newScale = 0.2; if (newScale > 4.0) newScale = 4.0;
                 state.products[activeElIndex][activeElType + 'Transform'].scale = newScale;
-                const s = state.settings; let pBase, prBase;
-                if (s.layout === 1) { pBase = 4.0; prBase = 12.0; } else if (s.layout === 2) { pBase = 3.0; prBase = 8.5; } else { pBase = 2.0; prBase = 5.5; }
+                const s = state.settings; 
+                const pageLayout = state.products[activeElIndex].forcedLayout || s.layout; // Puxa o layout real
+                
+                let pBase, prBase;
+                if (pageLayout === 1) { pBase = 4.0; prBase = 12.0; } else if (pageLayout === 2) { pBase = 3.0; prBase = 8.5; } else { pBase = 2.0; prBase = 5.5; }
                 pBase *= (s.prodFontScale / 100); prBase *= (s.priceFontScale / 100);
                 
                 let baseSize;
@@ -868,7 +941,7 @@
         els.addManualBtn.addEventListener('click', () => {
             const name = els.manualProdName.value.trim(), price = els.manualProdPrice.value.trim(), priceReg = els.manualProdPriceRegular.value.trim();
             if (!name || !price) return showToast("Preencha nome e preço principal.", "error");
-            state.products.push({ name: name.toUpperCase(), price: formatPrice(price), priceRegular: formatPrice(priceReg), nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 } });
+            state.products.push({ name: name.toUpperCase(), price: formatPrice(price), priceRegular: formatPrice(priceReg), forcedLayout: null, nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 } });
             els.manualProdName.value = ''; els.manualProdPrice.value = ''; els.manualProdPriceRegular.value = ''; els.manualProdName.focus(); renderPosters(); showToast("Inserido!", "success");
         });
 

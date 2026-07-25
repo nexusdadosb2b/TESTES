@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TESTE - Gerador de Cartazes de Supermercado</title>
+    <title>SEGURANCA - Gerador de Cartazes de Supermercado</title>
     <!-- Tailwind CSS para Estilização da Interface -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS para ler arquivos Excel -->
@@ -196,7 +196,8 @@
 
     <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
 
-    <aside class="no-print w-full md:w-[420px] bg-white shadow-xl h-full flex flex-col overflow-y-auto z-10 border-r border-gray-200">
+    <!-- SEGURANÇA FRONT-END: Adicionamos o ID 'appSidebar' para que o JavaScript consiga encontrar e esconder esta parte -->
+    <aside id="appSidebar" class="no-print w-full md:w-[420px] bg-white shadow-xl h-full flex flex-col overflow-y-auto z-10 border-r border-gray-200">
         <div class="p-6 bg-blue-700 text-white shrink-0 flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-bold flex items-center gap-2">
@@ -429,7 +430,8 @@
         </div>
     </aside>
 
-    <main class="flex-grow bg-gray-300 overflow-y-auto relative no-print-bg">
+    <!-- SEGURANÇA FRONT-END: Adicionamos o ID 'appMain' para esconder esta parte também -->
+    <main id="appMain" class="flex-grow bg-gray-300 overflow-y-auto relative no-print-bg">
         <div class="absolute inset-0 no-print pointer-events-none opacity-5" style="background-image: radial-gradient(#000 1px, transparent 1px); background-size: 20px 20px;"></div>
         <div class="p-4 flex justify-between items-center bg-white shadow-sm no-print sticky top-0 z-10 border-b border-gray-200">
             <h2 class="font-bold text-gray-800 flex items-center gap-2">
@@ -481,8 +483,12 @@
             }
         };
 
+        // SEGURANÇA FRONT-END: Capturamos as áreas vitais do sistema
         const els = {
-            loginOverlay: document.getElementById('loginOverlay'), loginForm: document.getElementById('loginForm'),
+            loginOverlay: document.getElementById('loginOverlay'), 
+            appSidebar: document.getElementById('appSidebar'), // NOVO: Captura o menu
+            appMain: document.getElementById('appMain'), // NOVO: Captura a área de preview
+            loginForm: document.getElementById('loginForm'),
             loginEmail: document.getElementById('loginEmail'), loginPassword: document.getElementById('loginPassword'),
             loginBtn: document.getElementById('loginBtn'), loginError: document.getElementById('loginError'), logoutBtn: document.getElementById('logoutBtn'),
             headerUpload: document.getElementById('headerUpload'), footerUpload: document.getElementById('footerUpload'),
@@ -500,6 +506,12 @@
             textClubNormal: document.getElementById('textClubNormal'), textClubPromo: document.getElementById('textClubPromo'), clubTextControl: document.getElementById('clubTextControl'), dePorTextControl: document.getElementById('dePorTextControl')
         };
 
+        // SEGURANÇA FRONT-END: Assim que o código é lido, removemos o sistema físico da tela.
+        // As variáveis acima guardaram a referência, mas o HTML desaparece do navegador.
+        els.appSidebar.remove();
+        els.appMain.remove();
+        els.toastContainer.remove();
+
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             const bgColors = { 'success': 'bg-green-600', 'error': 'bg-red-600', 'info': 'bg-blue-600' };
@@ -513,7 +525,15 @@
         if (auth) {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    currentUser = user; els.loginOverlay.classList.add('hidden'); els.logoutBtn.classList.remove('hidden');
+                    // SEGURANÇA FRONT-END: Firebase confirmou! Agora sim colamos o sistema na tela
+                    document.body.appendChild(els.toastContainer);
+                    document.body.appendChild(els.appSidebar);
+                    document.body.appendChild(els.appMain);
+                    
+                    currentUser = user; 
+                    els.loginOverlay.classList.add('hidden'); 
+                    els.logoutBtn.classList.remove('hidden');
+                    
                     els.cloudStatus.textContent = 'Nuvem Conectada'; els.cloudStatus.className = 'text-[10px] font-bold bg-green-100 text-green-800 px-2 py-1 rounded-full border border-green-200';
                     currentSessionId = crypto.randomUUID(); const sessionRef = doc(db, 'sessions', user.uid);
                     await setDoc(sessionRef, { sessionId: currentSessionId, lastLogin: serverTimestamp() });
@@ -521,10 +541,36 @@
                     sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => { if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) { signOut(auth).then(() => { alert("🚨 VOCÊ FOI DESCONECTADO!"); window.location.reload(); }); } });
                     loadSavedProjects();
                 } else {
-                    currentUser = null; els.loginOverlay.classList.remove('hidden'); els.logoutBtn.classList.add('hidden');
+                    // SEGURANÇA FRONT-END: Se não logou, removemos o sistema de novo (garantia extra)
+                    els.appSidebar.remove();
+                    els.appMain.remove();
+                    els.toastContainer.remove();
+
+                    currentUser = null; 
+                    els.loginOverlay.classList.remove('hidden'); 
+                    els.logoutBtn.classList.add('hidden');
                     els.savedProjectsList.innerHTML = '<li class="p-3 text-gray-500 text-center italic text-xs">Aguardando login...</li>';
                     if (sessionUnsubscribe) sessionUnsubscribe();
                     els.loginBtn.textContent = "Entrar no Sistema"; els.loginBtn.disabled = false; els.loginForm.reset(); els.loginError.classList.add('hidden');
+                    
+                    // LIMPEZA TOTAL DE ESTADO NO LOGOUT
+                    currentProjectId = null; loadedProjectName = ""; els.projectName.value = '';
+                    state.products = [];
+                    state.logoImg = null; els.logoUpload.value = ''; els.clearLogoBtn.classList.add('hidden');
+                    state.clubLogoImg = null; els.clubLogoUpload.value = ''; els.clearClubLogoBtn.classList.add('hidden');
+                    state.headerImg = null; els.headerUpload.value = ''; els.clearHeaderBtn.classList.add('hidden');
+                    state.footerImg = null; els.footerUpload.value = ''; els.clearFooterBtn.classList.add('hidden');
+                    
+                    els.manualProdName.value = ''; els.manualProdPrice.value = ''; els.manualProdPriceRegular.value = ''; els.excelUpload.value = '';
+                    state.settings = { themeMode: 'image', posterBgColor: "#ffffff", autoThemeHeaderBg: "#ef4444", autoThemeFooterBg: "#dc2626", autoThemeTextColor: "#fef08a", autoThemeText: "OFERTA IMPERDÍVEL", autoThemeSecondaryText: "APROVEITE NOSSAS PROMOÇÕES", autoTitleScale: 100, autoSubScale: 100, fontFamily: "'Anton', sans-serif", prodColor: "#1f2937", priceColor: "#ef4444", prodFontScale: 100, priceFontScale: 100, layout: 1, logoX: 2, logoY: 2, logoW: 28, promoType: 'normal', priceRegularColor: "#9ca3af", priceRegularFontScale: 100, textPromoDe: "PREÇO NORMAL R$", textPromoPor: "POR", textClubNormal: "CLIENTE", textClubPromo: "CLUBE", clubLogoGlobalScale: 100 };
+                    
+                    switchTab('image'); els.promoType.value = 'normal'; updatePromoUI();
+                    els.posterBgColor.value = "#ffffff"; els.autoHeaderBg.value = "#ef4444"; els.autoTextColor.value = "#fef08a"; els.autoFooterBg.value = "#dc2626"; els.autoThemeText.value = "OFERTA IMPERDÍVEL"; els.autoThemeSecondaryText.value = "APROVEITE NOSSAS PROMOÇÕES"; els.fontFamily.value = "'Anton', sans-serif"; els.prodColor.value = "#1f2937"; els.priceColor.value = "#ef4444"; els.priceRegularColor.value = "#9ca3af";
+                    els.prodFontSizeScale.value = 100; els.priceFontSizeScale.value = 100; els.priceRegularFontSizeScale.value = 100; els.clubLogoGlobalScale.value = 100; els.autoTitleScale.value = 100; els.autoSubScale.value = 100;
+                    els.prodFontSizeDisplay.textContent = "100%"; els.priceFontSizeDisplay.textContent = "100%"; els.priceRegularSizeDisplay.textContent = "100%"; els.clubLogoSizeDisplay.textContent = "100%"; els.autoTitleSizeDisplay.textContent = "100%"; els.autoSubSizeDisplay.textContent = "100%";
+                    
+                    els.layoutBtns.forEach(b => { if (parseInt(b.dataset.layout) === 1) { b.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.remove('border-gray-300', 'bg-white', 'text-gray-600', 'border'); } else { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); } });
+                    renderPosters();
                 }
             });
         }
@@ -694,7 +740,6 @@
             }; reader.readAsDataURL(file);
         }
 
-        // NOVO: Leitura de Excel com Inteligência de Automação de Layout
         function handleExcelUpload(e) {
             const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
             reader.onload = (event) => {
@@ -705,7 +750,6 @@
                 const firstRow = json[0] || {};
                 const keys = Object.keys(firstRow).map(k => k.toLowerCase());
                 
-                // MÁGICA: Detecta se é a planilha avançada
                 const isSmart = keys.some(k => ['grande', 'médio', 'medio', 'pequeno'].includes(k));
 
                 if (isSmart) {
@@ -735,7 +779,6 @@
                     });
                     if(importedCount > 0) showToast(`${importedCount} cartazes gerados via Planilha Inteligente!`, "success");
                 } else {
-                    // Modo de importação clássico/simples
                     const jsonArr = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
                     for (let i = 1; i < jsonArr.length; i++) {
                         const row = jsonArr[i]; 
@@ -779,7 +822,6 @@
                 return;
             }
 
-            // ATUALIZAÇÃO: @page aceita nomeações para misturar folhas Retrato e Paisagem na mesma impressão nativa do Chrome!
             els.dynamicPrintStyle.innerHTML = `
                 @page { margin: 0; }
                 @page portrait_page { size: A4 portrait; margin: 0; }
@@ -792,7 +834,6 @@
             const pages = []; 
             const layout1Items = []; const layout2Items = []; const layout4Items = [];
 
-            // Separação em Filas para Auto-Layout
             state.products.forEach((prod, originalIndex) => {
                 const targetLayout = prod.forcedLayout || s.layout;
                 const item = { prod, originalIndex, currentLayout: targetLayout };
@@ -821,7 +862,7 @@
                 
                 pageItems.forEach((item) => {
                     const prod = item.prod;
-                    const oIdx = item.originalIndex; // Index blindado para o mouse drag não se perder
+                    const oIdx = item.originalIndex;
 
                     if (!prod.nameTransform) prod.nameTransform = { x: 0, y: 0, scale: 1 }; 
                     if (!prod.priceTransform) prod.priceTransform = { x: 0, y: 0, scale: 1 }; 
@@ -916,7 +957,7 @@
                 let newScale = startElScale + ((e.clientX - startMouseX) / 100); if (newScale < 0.2) newScale = 0.2; if (newScale > 4.0) newScale = 4.0;
                 state.products[activeElIndex][activeElType + 'Transform'].scale = newScale;
                 const s = state.settings; 
-                const pageLayout = state.products[activeElIndex].forcedLayout || s.layout; // Puxa o layout real
+                const pageLayout = state.products[activeElIndex].forcedLayout || s.layout; 
                 
                 let pBase, prBase;
                 if (pageLayout === 1) { pBase = 4.0; prBase = 12.0; } else if (pageLayout === 2) { pBase = 3.0; prBase = 8.5; } else { pBase = 2.0; prBase = 5.5; }

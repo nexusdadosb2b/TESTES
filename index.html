@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PROMOPRINT - Gerador de Cartazes de Supermercado</title>
+    
+    <!-- SEGURANÇA FRONT-END: CSP (Content Security Policy) - A "Lista VIP" de permissões -->
+    <!-- Proíbe terminantemente que o navegador baixe qualquer código, imagem ou fonte que não seja do Google, Firebase, Tailwind ou SheetJS. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://firebasestorage.googleapis.com; connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com wss://*.firebaseio.com;">
+
     <!-- Tailwind CSS para Estilização da Interface -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS para ler arquivos Excel -->
@@ -610,7 +615,7 @@
             try {
                 let projectId = currentProjectId; if (currentProjectId && name !== loadedProjectName) projectId = crypto.randomUUID(); else if (!currentProjectId) projectId = crypto.randomUUID();
                 
-                // SEGURANÇA: Estamos enviando o savedBySession para o Firebase validar a sessão atual
+                // O código envia a sessão e o horário do servidor corretamente
                 await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', projectId), { 
                     name, 
                     headerImg: state.headerImg, 

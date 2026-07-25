@@ -610,7 +610,19 @@
             try {
                 let projectId = currentProjectId; if (currentProjectId && name !== loadedProjectName) projectId = crypto.randomUUID(); else if (!currentProjectId) projectId = crypto.randomUUID();
                 
-                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', projectId), { name, headerImg: state.headerImg, footerImg: state.footerImg, logoImg: state.logoImg, clubLogoImg: state.clubLogoImg, products: state.products, settings: state.settings, updatedAt: serverTimestamp() });
+                // SEGURANÇA: Estamos enviando o savedBySession para o Firebase validar a sessão atual
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', projectId), { 
+                    name, 
+                    headerImg: state.headerImg, 
+                    footerImg: state.footerImg, 
+                    logoImg: state.logoImg, 
+                    clubLogoImg: state.clubLogoImg, 
+                    products: state.products, 
+                    settings: state.settings, 
+                    updatedAt: serverTimestamp(),
+                    savedBySession: currentSessionId 
+                });
+                
                 currentProjectId = projectId; loadedProjectName = name; showToast("Campanha salva com sucesso!", "success");
             } catch (error) { 
                 showToast("Erro ao salvar.", "error"); 

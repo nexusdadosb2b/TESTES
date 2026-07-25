@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEGURANCA - Gerador de Cartazes de Supermercado</title>
+    <title>PROMOPRINT - Gerador de Cartazes de Supermercado</title>
     <!-- Tailwind CSS para Estilização da Interface -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS para ler arquivos Excel -->
@@ -196,7 +196,7 @@
 
     <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
 
-    <!-- SEGURANÇA FRONT-END: Adicionamos o ID 'appSidebar' para que o JavaScript consiga encontrar e esconder esta parte -->
+    <!-- SEGURANÇA FRONT-END: ID appSidebar -->
     <aside id="appSidebar" class="no-print w-full md:w-[420px] bg-white shadow-xl h-full flex flex-col overflow-y-auto z-10 border-r border-gray-200">
         <div class="p-6 bg-blue-700 text-white shrink-0 flex justify-between items-center">
             <div>
@@ -430,7 +430,7 @@
         </div>
     </aside>
 
-    <!-- SEGURANÇA FRONT-END: Adicionamos o ID 'appMain' para esconder esta parte também -->
+    <!-- SEGURANÇA FRONT-END: ID appMain -->
     <main id="appMain" class="flex-grow bg-gray-300 overflow-y-auto relative no-print-bg">
         <div class="absolute inset-0 no-print pointer-events-none opacity-5" style="background-image: radial-gradient(#000 1px, transparent 1px); background-size: 20px 20px;"></div>
         <div class="p-4 flex justify-between items-center bg-white shadow-sm no-print sticky top-0 z-10 border-b border-gray-200">
@@ -447,6 +447,19 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // SEGURANÇA FRONT-END: FILTRO XSS
+        // Esta função pega qualquer texto e desativa tags HTML e scripts maliciosos.
+        function sanitizeHTML(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag));
+        }
 
         const firebaseConfig = {
             apiKey: "AIzaSyDB81varVquhypzkLfbf6bf2RiNX4fcPL4",
@@ -483,11 +496,10 @@
             }
         };
 
-        // SEGURANÇA FRONT-END: Capturamos as áreas vitais do sistema
         const els = {
             loginOverlay: document.getElementById('loginOverlay'), 
-            appSidebar: document.getElementById('appSidebar'), // NOVO: Captura o menu
-            appMain: document.getElementById('appMain'), // NOVO: Captura a área de preview
+            appSidebar: document.getElementById('appSidebar'), 
+            appMain: document.getElementById('appMain'), 
             loginForm: document.getElementById('loginForm'),
             loginEmail: document.getElementById('loginEmail'), loginPassword: document.getElementById('loginPassword'),
             loginBtn: document.getElementById('loginBtn'), loginError: document.getElementById('loginError'), logoutBtn: document.getElementById('logoutBtn'),
@@ -506,8 +518,6 @@
             textClubNormal: document.getElementById('textClubNormal'), textClubPromo: document.getElementById('textClubPromo'), clubTextControl: document.getElementById('clubTextControl'), dePorTextControl: document.getElementById('dePorTextControl')
         };
 
-        // SEGURANÇA FRONT-END: Assim que o código é lido, removemos o sistema físico da tela.
-        // As variáveis acima guardaram a referência, mas o HTML desaparece do navegador.
         els.appSidebar.remove();
         els.appMain.remove();
         els.toastContainer.remove();
@@ -525,7 +535,6 @@
         if (auth) {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    // SEGURANÇA FRONT-END: Firebase confirmou! Agora sim colamos o sistema na tela
                     document.body.appendChild(els.toastContainer);
                     document.body.appendChild(els.appSidebar);
                     document.body.appendChild(els.appMain);
@@ -541,7 +550,6 @@
                     sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => { if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) { signOut(auth).then(() => { alert("🚨 VOCÊ FOI DESCONECTADO!"); window.location.reload(); }); } });
                     loadSavedProjects();
                 } else {
-                    // SEGURANÇA FRONT-END: Se não logou, removemos o sistema de novo (garantia extra)
                     els.appSidebar.remove();
                     els.appMain.remove();
                     els.toastContainer.remove();
@@ -553,7 +561,6 @@
                     if (sessionUnsubscribe) sessionUnsubscribe();
                     els.loginBtn.textContent = "Entrar no Sistema"; els.loginBtn.disabled = false; els.loginForm.reset(); els.loginError.classList.add('hidden');
                     
-                    // LIMPEZA TOTAL DE ESTADO NO LOGOUT
                     currentProjectId = null; loadedProjectName = ""; els.projectName.value = '';
                     state.products = [];
                     state.logoImg = null; els.logoUpload.value = ''; els.clearLogoBtn.classList.add('hidden');
@@ -588,7 +595,8 @@
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data(); const li = document.createElement('li');
                     li.className = 'p-3 flex justify-between items-center hover:bg-gray-50 border-b text-sm transition';
-                    li.innerHTML = `<span class="font-bold text-gray-700 truncate w-1/2">${data.name}</span>`;
+                    // SEGURANÇA FRONT-END: FILTRO XSS no nome do projeto na lista
+                    li.innerHTML = `<span class="font-bold text-gray-700 truncate w-1/2">${sanitizeHTML(data.name)}</span>`;
                     const actionsDiv = document.createElement('div'); actionsDiv.className = 'flex gap-2';
                     const loadBtn = document.createElement('button'); loadBtn.textContent = 'Abrir'; loadBtn.className = 'text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded font-bold border border-blue-200'; loadBtn.onclick = () => loadProjectData(docSnap.id, data);
                     const delBtn = document.createElement('button'); delBtn.innerHTML = `✕`; delBtn.className = 'text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold border border-red-200'; delBtn.onclick = () => deleteProject(docSnap.id);
@@ -812,8 +820,10 @@
                 footerHTML = state.footerImg ? `<img src="${state.footerImg}" class="poster-footer" alt="Rodapé">` : '';
             } else {
                 const tBaseAuto = 4.5 * (s.autoTitleScale / 100); const sBaseAuto = 2.0 * (s.autoSubScale / 100);
-                headerHTML = `<div class="poster-header-auto" style="background-color: ${s.autoThemeHeaderBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${tBaseAuto}rem;">${s.autoThemeText}</span></div>`;
-                footerHTML = `<div class="poster-footer-auto" style="background-color: ${s.autoThemeFooterBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${sBaseAuto}rem;">${s.autoThemeSecondaryText}</span></div>`;
+                
+                // SEGURANÇA FRONT-END: FILTRO XSS
+                headerHTML = `<div class="poster-header-auto" style="background-color: ${s.autoThemeHeaderBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${tBaseAuto}rem;">${sanitizeHTML(s.autoThemeText)}</span></div>`;
+                footerHTML = `<div class="poster-footer-auto" style="background-color: ${s.autoThemeFooterBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${sBaseAuto}rem;">${sanitizeHTML(s.autoThemeSecondaryText)}</span></div>`;
             }
 
             if (state.products.length === 0) {
@@ -883,10 +893,11 @@
                         const prRegSize = (prBase * 0.40) * (s.priceRegularFontScale / 100) * prod.priceRegularTransform.scale;
                         const prefixSize = (prBase * 0.40) * prod.prefixTransform.scale;
                         
+                        // SEGURANÇA FRONT-END: FILTRO XSS 
                         priceRegularHTML = `
                             <div class="editable-element" data-index="${oIdx}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${prRegSize}rem; color: ${s.priceRegularColor}; text-align: center; width: 100%; font-weight: 900; line-height: 0.9; text-transform: uppercase;">
-                                ${textTop.trim() !== '' ? `<div style="margin-bottom: 0px;">${textTop}</div>` : ''}
-                                <div>R$ ${prod.priceRegular}</div>
+                                ${textTop.trim() !== '' ? `<div style="margin-bottom: 0px;">${sanitizeHTML(textTop)}</div>` : ''}
+                                <div>R$ ${sanitizeHTML(prod.priceRegular)}</div>
                                 <div class="element-resize-handle no-print"></div>
                             </div>
                         `;
@@ -896,7 +907,7 @@
                             const logoW = 100 * (s.clubLogoGlobalScale / 100);
                             clubLogoEl = `<img src="${state.clubLogoImg}" style="width: ${logoW}%; height: auto; object-fit: contain;">`;
                         } else { 
-                            clubLogoEl = textBottom.trim() !== '' ? `<div style="font-weight: 900; line-height: 0.9; text-transform: uppercase;">${textBottom}</div>` : ''; 
+                            clubLogoEl = textBottom.trim() !== '' ? `<div style="font-weight: 900; line-height: 0.9; text-transform: uppercase;">${sanitizeHTML(textBottom)}</div>` : ''; 
                         }
 
                         prefixHTML = clubLogoEl !== '' ? `
@@ -907,11 +918,12 @@
                         ` : '';
                     }
 
+                    // SEGURANÇA FRONT-END: FILTRO XSS
                     pageDiv.innerHTML += `<div class="poster">${logoHTML}${headerHTML}
                         <div class="poster-body" style="padding: 2%;">
                             
                             <div class="product-name editable-element" data-index="${oIdx}" data-type="name" style="transform: translate(${prod.nameTransform.x}px, ${prod.nameTransform.y}px); font-size: ${nameSize}rem; font-weight: 900; line-height: 0.9;">
-                                ${prod.name}
+                                ${sanitizeHTML(prod.name)}
                                 <div class="element-resize-handle no-print"></div>
                             </div>
                             
@@ -922,8 +934,8 @@
                                 <table style="border-collapse: collapse; margin: 0 auto; line-height: 0.8;">
                                     <tr>
                                         <td style="vertical-align: top; font-size: 0.4em; font-weight: 900; padding-top: 0.15em; padding-right: 2px;">R$</td>
-                                        <td style="vertical-align: top; font-weight: 900; letter-spacing: -0.02em;">${priceF.intPart}</td>
-                                        <td style="vertical-align: top; font-size: 0.5em; font-weight: 900; padding-top: 0.1em;">${priceF.decPart}</td>
+                                        <td style="vertical-align: top; font-weight: 900; letter-spacing: -0.02em;">${sanitizeHTML(priceF.intPart)}</td>
+                                        <td style="vertical-align: top; font-size: 0.5em; font-weight: 900; padding-top: 0.1em;">${sanitizeHTML(priceF.decPart)}</td>
                                     </tr>
                                 </table>
                                 <div class="element-resize-handle no-print"></div>

@@ -196,7 +196,6 @@
 
     <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
 
-    <!-- SEGURANÇA FRONT-END: ID appSidebar -->
     <aside id="appSidebar" class="no-print w-full md:w-[420px] bg-white shadow-xl h-full flex flex-col overflow-y-auto z-10 border-r border-gray-200">
         <div class="p-6 bg-blue-700 text-white shrink-0 flex justify-between items-center">
             <div>
@@ -366,13 +365,11 @@
                         </div>
                     </div>
 
-                    <!-- Campos de Texto do Clube -->
                     <div id="clubTextControl" class="hidden grid grid-cols-2 gap-2 mt-2">
                         <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 1 (Clube)</label><input type="text" id="textClubNormal" value="CLIENTE" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
                         <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 2 (Clube)</label><input type="text" id="textClubPromo" value="CLUBE" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
                     </div>
 
-                    <!-- Campos de Texto De/Por -->
                     <div class="grid grid-cols-2 gap-2 mt-2" id="dePorTextControl">
                         <div id="textPromo1"><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 1 (Normal)</label><input type="text" id="textPromoDe" value="PREÇO NORMAL R$" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
                         <div id="textPromo2"><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 2 (Promo)</label><input type="text" id="textPromoPor" value="POR" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
@@ -430,7 +427,6 @@
         </div>
     </aside>
 
-    <!-- SEGURANÇA FRONT-END: ID appMain -->
     <main id="appMain" class="flex-grow bg-gray-300 overflow-y-auto relative no-print-bg">
         <div class="absolute inset-0 no-print pointer-events-none opacity-5" style="background-image: radial-gradient(#000 1px, transparent 1px); background-size: 20px 20px;"></div>
         <div class="p-4 flex justify-between items-center bg-white shadow-sm no-print sticky top-0 z-10 border-b border-gray-200">
@@ -448,8 +444,6 @@
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // SEGURANÇA FRONT-END: FILTRO XSS
-        // Esta função pega qualquer texto e desativa tags HTML e scripts maliciosos.
         function sanitizeHTML(str) {
             if (typeof str !== 'string') return str;
             return str.replace(/[&<>'"]/g, tag => ({
@@ -465,7 +459,7 @@
             apiKey: "AIzaSyDB81varVquhypzkLfbf6bf2RiNX4fcPL4",
             authDomain: "promoprint-maker.firebaseapp.com",
             projectId: "promoprint-maker",
-            storageBucket: "promoprint-maker.firebasestorage.app",
+            storageBucket: "promoprint-maker.firebasestorage.app", 
             messagingSenderId: "218054208443",
             appId: "1:218054208443:web:5e1098858d03609e8bf29e"
         };
@@ -479,7 +473,11 @@
         let unsubscribeProjects = null;
         let sessionUnsubscribe = null;
 
-        try { app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app); } catch (e) { console.warn("Erro no Firebase", e); }
+        try { 
+            app = initializeApp(firebaseConfig); 
+            auth = getAuth(app); 
+            db = getFirestore(app); 
+        } catch (e) { console.warn("Erro no Firebase", e); }
 
         const state = {
             headerImg: null, footerImg: null, logoImg: null, clubLogoImg: null, products: [], 
@@ -595,7 +593,6 @@
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data(); const li = document.createElement('li');
                     li.className = 'p-3 flex justify-between items-center hover:bg-gray-50 border-b text-sm transition';
-                    // SEGURANÇA FRONT-END: FILTRO XSS no nome do projeto na lista
                     li.innerHTML = `<span class="font-bold text-gray-700 truncate w-1/2">${sanitizeHTML(data.name)}</span>`;
                     const actionsDiv = document.createElement('div'); actionsDiv.className = 'flex gap-2';
                     const loadBtn = document.createElement('button'); loadBtn.textContent = 'Abrir'; loadBtn.className = 'text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded font-bold border border-blue-200'; loadBtn.onclick = () => loadProjectData(docSnap.id, data);
@@ -608,12 +605,18 @@
         async function saveCurrentProject() {
             if (!currentUser) return showToast("Faça login para salvar.", "error");
             const name = els.projectName.value.trim(); if (!name) return showToast("Dê um nome para sua campanha.", "error");
+
             els.saveProjectBtn.disabled = true; els.saveProjectBtn.textContent = 'Salvando...';
             try {
                 let projectId = currentProjectId; if (currentProjectId && name !== loadedProjectName) projectId = crypto.randomUUID(); else if (!currentProjectId) projectId = crypto.randomUUID();
+                
                 await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', projectId), { name, headerImg: state.headerImg, footerImg: state.footerImg, logoImg: state.logoImg, clubLogoImg: state.clubLogoImg, products: state.products, settings: state.settings, updatedAt: serverTimestamp() });
                 currentProjectId = projectId; loadedProjectName = name; showToast("Campanha salva com sucesso!", "success");
-            } catch (error) { showToast("Erro ao salvar.", "error"); } finally { els.saveProjectBtn.disabled = false; els.saveProjectBtn.textContent = 'Salvar'; }
+            } catch (error) { 
+                showToast("Erro ao salvar.", "error"); 
+            } finally { 
+                els.saveProjectBtn.disabled = false; els.saveProjectBtn.textContent = 'Salvar'; 
+            }
         }
 
         function loadProjectData(id, data) {
@@ -733,12 +736,24 @@
             reader.onload = (event) => {
                 const img = new Image();
                 img.onload = () => {
-                    const canvas = document.createElement('canvas'); let width = img.width, height = img.height; const MAX_WIDTH = (stateKey === 'logoImg' || stateKey === 'clubLogoImg') ? 1000 : 2480; 
+                    const canvas = document.createElement('canvas'); 
+                    let width = img.width, height = img.height; 
+                    
+                    const MAX_WIDTH = (stateKey === 'logoImg' || stateKey === 'clubLogoImg') ? 600 : 1200; 
                     if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+                    
                     canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d');
-                    if(stateKey !== 'logoImg' && stateKey !== 'clubLogoImg') { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, width, height); }
+                    
+                    if(stateKey !== 'logoImg' && stateKey !== 'clubLogoImg') { 
+                        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, width, height); 
+                    }
                     ctx.drawImage(img, 0, 0, width, height);
-                    state[stateKey] = canvas.toDataURL((stateKey === 'logoImg' || stateKey === 'clubLogoImg') ? 'image/png' : 'image/jpeg', 0.75);
+                    
+                    const formato = (stateKey === 'logoImg' || stateKey === 'clubLogoImg') ? 'image/png' : 'image/jpeg';
+                    const qualidade = (formato === 'image/jpeg') ? 0.6 : undefined;
+                    
+                    state[stateKey] = canvas.toDataURL(formato, qualidade);
+                    
                     if(stateKey === 'logoImg') els.clearLogoBtn.classList.remove('hidden');
                     if(stateKey === 'clubLogoImg') els.clearClubLogoBtn.classList.remove('hidden');
                     if(stateKey === 'headerImg') els.clearHeaderBtn.classList.remove('hidden');
@@ -821,7 +836,6 @@
             } else {
                 const tBaseAuto = 4.5 * (s.autoTitleScale / 100); const sBaseAuto = 2.0 * (s.autoSubScale / 100);
                 
-                // SEGURANÇA FRONT-END: FILTRO XSS
                 headerHTML = `<div class="poster-header-auto" style="background-color: ${s.autoThemeHeaderBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${tBaseAuto}rem;">${sanitizeHTML(s.autoThemeText)}</span></div>`;
                 footerHTML = `<div class="poster-footer-auto" style="background-color: ${s.autoThemeFooterBg}; color: ${s.autoThemeTextColor};"><span style="font-size: ${sBaseAuto}rem;">${sanitizeHTML(s.autoThemeSecondaryText)}</span></div>`;
             }
@@ -893,7 +907,6 @@
                         const prRegSize = (prBase * 0.40) * (s.priceRegularFontScale / 100) * prod.priceRegularTransform.scale;
                         const prefixSize = (prBase * 0.40) * prod.prefixTransform.scale;
                         
-                        // SEGURANÇA FRONT-END: FILTRO XSS 
                         priceRegularHTML = `
                             <div class="editable-element" data-index="${oIdx}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${prRegSize}rem; color: ${s.priceRegularColor}; text-align: center; width: 100%; font-weight: 900; line-height: 0.9; text-transform: uppercase;">
                                 ${textTop.trim() !== '' ? `<div style="margin-bottom: 0px;">${sanitizeHTML(textTop)}</div>` : ''}
@@ -918,7 +931,6 @@
                         ` : '';
                     }
 
-                    // SEGURANÇA FRONT-END: FILTRO XSS
                     pageDiv.innerHTML += `<div class="poster">${logoHTML}${headerHTML}
                         <div class="poster-body" style="padding: 2%;">
                             

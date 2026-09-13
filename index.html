@@ -707,6 +707,7 @@
             }; reader.readAsDataURL(file);
         }
 
+        // ATUALIZAÇÃO CIRÚRGICA: Lógica Inteligente de Inversão de Preços no Excel
         function handleExcelUpload(e) {
             const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
             reader.onload = (event) => {
@@ -728,8 +729,20 @@
                         const name = String(getVal(['produto', 'nome', 'descrição', 'descricao']) || '').trim();
                         if(!name) return;
                         
-                        const price = formatPrice(getVal(['preço 1', 'preço promo', 'promo', 'por', 'preço', 'preco']));
-                        const priceReg = formatPrice(getVal(['preço 2', 'preço normal', 'de', 'normal']));
+                        const val1 = getVal(['preço 1', 'preco 1', 'preço normal', 'de', 'normal', 'preço', 'preco']);
+                        const val2 = getVal(['preço 2', 'preco 2', 'preço promo', 'promo', 'por']);
+                        
+                        let price = "0,00";
+                        let priceReg = "";
+                        
+                        if (val1 !== undefined && val2 !== undefined && String(val2).trim() !== "") {
+                            price = formatPrice(val2);    // Coluna 2 (Menor) vai para o principal gigante
+                            priceReg = formatPrice(val1); // Coluna 1 (Maior) vai para o antigo/riscado
+                        } else if (val1 !== undefined) {
+                            price = formatPrice(val1);    // Só tem 1 preço na coluna 1, ele é o principal
+                        } else if (val2 !== undefined) {
+                            price = formatPrice(val2);
+                        }
                         
                         const qG = parseInt(getVal(['grande'])) || 0;
                         const qM = parseInt(getVal(['médio', 'medio'])) || 0;
@@ -750,8 +763,17 @@
                     for (let i = 1; i < jsonArr.length; i++) {
                         const row = jsonArr[i]; 
                         if (row && row[0] && row[1]) {
+                            let pMain, pReg;
+                            if (row[2] !== undefined && String(row[2]).trim() !== "") {
+                                pMain = formatPrice(row[2]); // Coluna C (Preço 2) vira o principal gigante
+                                pReg = formatPrice(row[1]);  // Coluna B (Preço 1) vira o antigo/riscado
+                            } else {
+                                pMain = formatPrice(row[1]); // Só tem Coluna B, vira o principal gigante
+                                pReg = "";
+                            }
+
                             state.products.push({ 
-                                name: String(row[0]).trim().toUpperCase(), price: formatPrice(row[1]), priceRegular: row[2] ? formatPrice(row[2]) : "", forcedLayout: null,
+                                name: String(row[0]).trim().toUpperCase(), price: pMain, priceRegular: pReg, forcedLayout: null,
                                 nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 }
                             });
                             importedCount++;
@@ -1037,7 +1059,6 @@
         els.saveProjectBtn.addEventListener('click', saveCurrentProject);
         els.printBtn.addEventListener('click', () => { if(state.products.length === 0) return showToast("Adicione produtos antes de imprimir!", "error"); window.print(); });
 
-        // NOVO: EDIÇÃO DIRETA POR DUPLO CLIQUE (INDEPENDENTE POR PLACA)
         document.addEventListener('dblclick', (e) => {
             const editableEl = e.target.closest('.editable-element');
             if (!editableEl) return;
@@ -1066,7 +1087,6 @@
                 }
             }
             
-            // Remove a seleção de texto azul chata que o navegador faz no duplo clique
             window.getSelection().removeAllRanges();
         });
 

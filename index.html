@@ -527,7 +527,7 @@
                     currentSessionId = crypto.randomUUID(); const sessionRef = doc(db, 'sessions', user.uid);
                     await setDoc(sessionRef, { sessionId: currentSessionId, lastLogin: serverTimestamp() });
                     if (sessionUnsubscribe) sessionUnsubscribe();
-                    sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => { if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) { signOut(auth).then(() => { alert("🚨 VOCÊ FOI DESCONECTADO!"); els.newProjectBtn.click(); window.location.reload(); }); } });
+                    sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => { if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) { signOut(auth).then(() => { alert("🚨 VOCÊ FOI DESCONECTADO!"); window.location.reload(); }); } });
                     loadSavedProjects();
                 } else {
                     currentUser = null; els.loginOverlay.classList.remove('hidden'); els.logoutBtn.classList.add('hidden');
@@ -539,7 +539,15 @@
         }
         
         els.loginForm.addEventListener('submit', (e) => { e.preventDefault(); els.loginBtn.textContent = "Validando..."; els.loginBtn.disabled = true; signInWithEmailAndPassword(auth, els.loginEmail.value, els.loginPassword.value).catch(err => { els.loginError.textContent = "Dados incorretos ou conta inexistente."; els.loginError.classList.remove('hidden'); els.loginBtn.textContent = "Entrar no Sistema"; els.loginBtn.disabled = false; }); });
-        els.logoutBtn.addEventListener('click', () => { if(confirm("Deseja sair do sistema?")) { els.newProjectBtn.click(); signOut(auth); } });
+        
+        // CORREÇÃO: Limpeza e Logoff com Segurança Máxima (Reload do JS e da Memória do Navegador)
+        els.logoutBtn.addEventListener('click', () => { 
+            if(confirm("Deseja sair do sistema?")) { 
+                signOut(auth).then(() => { 
+                    window.location.reload(); 
+                }); 
+            } 
+        });
 
         function loadSavedProjects() {
             if (!currentUser) return;
@@ -707,7 +715,6 @@
             }; reader.readAsDataURL(file);
         }
 
-        // ATUALIZAÇÃO CIRÚRGICA: Lógica Inteligente de Inversão de Preços no Excel
         function handleExcelUpload(e) {
             const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
             reader.onload = (event) => {
@@ -736,10 +743,10 @@
                         let priceReg = "";
                         
                         if (val1 !== undefined && val2 !== undefined && String(val2).trim() !== "") {
-                            price = formatPrice(val2);    // Coluna 2 (Menor) vai para o principal gigante
-                            priceReg = formatPrice(val1); // Coluna 1 (Maior) vai para o antigo/riscado
+                            price = formatPrice(val2);
+                            priceReg = formatPrice(val1);
                         } else if (val1 !== undefined) {
-                            price = formatPrice(val1);    // Só tem 1 preço na coluna 1, ele é o principal
+                            price = formatPrice(val1);
                         } else if (val2 !== undefined) {
                             price = formatPrice(val2);
                         }
@@ -765,10 +772,10 @@
                         if (row && row[0] && row[1]) {
                             let pMain, pReg;
                             if (row[2] !== undefined && String(row[2]).trim() !== "") {
-                                pMain = formatPrice(row[2]); // Coluna C (Preço 2) vira o principal gigante
-                                pReg = formatPrice(row[1]);  // Coluna B (Preço 1) vira o antigo/riscado
+                                pMain = formatPrice(row[2]); 
+                                pReg = formatPrice(row[1]);  
                             } else {
-                                pMain = formatPrice(row[1]); // Só tem Coluna B, vira o principal gigante
+                                pMain = formatPrice(row[1]); 
                                 pReg = "";
                             }
 
@@ -837,6 +844,10 @@
 
             els.pageCountDisplay.textContent = `Páginas: ${pages.length}`;
 
+            // Variáveis Globais de Texto (Fallback)
+            const globalTextTop = s.promoType === 'club' ? s.textClubNormal : s.textPromoDe;
+            const globalTextBottom = s.promoType === 'club' ? s.textClubPromo : s.textPromoPor;
+
             pages.forEach((pageItems) => {
                 const pageLayout = pageItems[0].currentLayout;
                 
@@ -866,17 +877,17 @@
                     let prefixHTML = '';
                     
                     if (s.promoType === 'club' || s.promoType === 'from_to') {
-                        const textTop = s.promoType === 'club' ? s.textClubNormal : s.textPromoDe;
-                        const textBottom = s.promoType === 'club' ? s.textClubPromo : s.textPromoPor;
+                        const currentTextTop = prod.customTextTop !== undefined ? prod.customTextTop : globalTextTop;
+                        const currentTextBottom = prod.customTextBottom !== undefined ? prod.customTextBottom : globalTextBottom;
                         
                         const prRegSize = (prBase * 0.40) * (s.priceRegularFontScale / 100) * prod.priceRegularTransform.scale;
                         const prefixSize = (prBase * 0.40) * prod.prefixTransform.scale;
                         
-                        if (textTop.trim() !== '' || prod.priceRegular.trim() !== '') {
+                        if (currentTextTop.trim() !== '' || prod.priceRegular.trim() !== '') {
                             priceRegularHTML = `
                                 <div class="editable-element" data-index="${oIdx}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${prRegSize}rem; color: ${s.priceRegularColor}; text-align: center; width: 100%; font-weight: 900; line-height: 0.9; text-transform: uppercase; margin-bottom: 0px;">
-                                    ${textTop.trim() !== '' ? `<div style="margin-bottom: 0px;">${textTop}</div>` : ''}
-                                    ${prod.priceRegular.trim() !== '' ? `<div>R$ ${prod.priceRegular}</div>` : ''}
+                                    ${currentTextTop.trim() !== '' ? `<div class="sub-edit-label" title="Dê 2 cliques para editar o rótulo (ex: CLIENTE)" style="margin-bottom: 0px; cursor: text;">${currentTextTop}</div>` : ''}
+                                    ${prod.priceRegular.trim() !== '' ? `<div class="sub-edit-price" title="Dê 2 cliques para editar o PREÇO ANTERIOR" style="cursor: text;">R$ ${prod.priceRegular}</div>` : ''}
                                     <div class="element-resize-handle no-print"></div>
                                 </div>
                             `;
@@ -886,8 +897,8 @@
                         if (s.promoType === 'club' && state.clubLogoImg) {
                             const logoW = 100 * (s.clubLogoGlobalScale / 100);
                             clubLogoEl = `<img src="${state.clubLogoImg}" style="width: ${logoW}%; height: auto; object-fit: contain;">`;
-                        } else if (textBottom.trim() !== '') { 
-                            clubLogoEl = `<div style="font-weight: 900; line-height: 0.9; text-transform: uppercase;">${textBottom}</div>`; 
+                        } else if (currentTextBottom.trim() !== '') { 
+                            clubLogoEl = `<div class="sub-edit-prefix" title="Dê 2 cliques para editar o rótulo (ex: CLUBE)" style="font-weight: 900; line-height: 0.9; text-transform: uppercase; cursor: text;">${currentTextBottom}</div>`; 
                         }
 
                         if (clubLogoEl !== '') {
@@ -1065,18 +1076,35 @@
             
             const type = editableEl.dataset.type;
             const index = parseInt(editableEl.dataset.index);
+            const s = state.settings;
             
             if (type === 'name') {
                 const newText = prompt("EDIÇÃO INDEPENDENTE:\nDigite o novo NOME do produto apenas para este cartaz:", state.products[index].name);
                 if (newText !== null && newText.trim() !== "") { state.products[index].name = newText.toUpperCase(); renderPosters(); }
             } 
+            else if (type === 'priceRegular') {
+                if (e.target.closest('.sub-edit-label')) {
+                    const currentLabel = state.products[index].customTextTop !== undefined ? state.products[index].customTextTop : (s.promoType === 'club' ? s.textClubNormal : s.textPromoDe);
+                    const newLabel = prompt("EDIÇÃO INDEPENDENTE:\nDigite o rótulo superior (ex: CLIENTE) apenas para este cartaz:", currentLabel);
+                    if (newLabel !== null) { state.products[index].customTextTop = newLabel.toUpperCase(); renderPosters(); }
+                } else if (e.target.closest('.sub-edit-price')) {
+                    const newText = prompt("EDIÇÃO INDEPENDENTE:\nDigite o PREÇO ANTERIOR apenas para este cartaz (ex: 15,90):", state.products[index].priceRegular);
+                    if (newText !== null) { state.products[index].priceRegular = formatPrice(newText); renderPosters(); } 
+                } else {
+                    const newText = prompt("EDIÇÃO INDEPENDENTE:\nDigite o PREÇO ANTERIOR apenas para este cartaz (ex: 15,90):", state.products[index].priceRegular);
+                    if (newText !== null) { state.products[index].priceRegular = formatPrice(newText); renderPosters(); } 
+                }
+            }
+            else if (type === 'prefix') {
+                if (e.target.closest('.sub-edit-prefix')) {
+                    const currentLabelBottom = state.products[index].customTextBottom !== undefined ? state.products[index].customTextBottom : (s.promoType === 'club' ? s.textClubPromo : s.textPromoPor);
+                    const newLabelBottom = prompt("EDIÇÃO INDEPENDENTE:\nDigite o rótulo inferior (ex: CLUBE) apenas para este cartaz:", currentLabelBottom);
+                    if (newLabelBottom !== null) { state.products[index].customTextBottom = newLabelBottom.toUpperCase(); renderPosters(); }
+                }
+            }
             else if (type === 'price') {
                 const newText = prompt("EDIÇÃO INDEPENDENTE:\nDigite o novo PREÇO PRINCIPAL apenas para este cartaz (ex: 10,99):", state.products[index].price);
                 if (newText !== null && newText.trim() !== "") { state.products[index].price = formatPrice(newText); renderPosters(); }
-            }
-            else if (type === 'priceRegular') {
-                const newText = prompt("EDIÇÃO INDEPENDENTE:\nDigite o novo PREÇO ANTERIOR apenas para este cartaz (ex: 15,90):", state.products[index].priceRegular);
-                if (newText !== null) { state.products[index].priceRegular = formatPrice(newText); renderPosters(); } 
             }
             else if (type === 'globalValidity') {
                 const newText = prompt("EDIÇÃO GLOBAL:\nDigite a nova DATA DE VALIDADE (altera todos):", state.settings.validityText);

@@ -527,7 +527,7 @@
                     currentSessionId = crypto.randomUUID(); const sessionRef = doc(db, 'sessions', user.uid);
                     await setDoc(sessionRef, { sessionId: currentSessionId, lastLogin: serverTimestamp() });
                     if (sessionUnsubscribe) sessionUnsubscribe();
-                    sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => { if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) { signOut(auth).then(() => { alert("🚨 VOCÊ FOI DESCONECTADO!"); window.location.reload(); }); } });
+                    sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => { if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) { signOut(auth).then(() => { window.location.reload(); }); } });
                     loadSavedProjects();
                 } else {
                     currentUser = null; els.loginOverlay.classList.remove('hidden'); els.logoutBtn.classList.add('hidden');
@@ -540,7 +540,6 @@
         
         els.loginForm.addEventListener('submit', (e) => { e.preventDefault(); els.loginBtn.textContent = "Validando..."; els.loginBtn.disabled = true; signInWithEmailAndPassword(auth, els.loginEmail.value, els.loginPassword.value).catch(err => { els.loginError.textContent = "Dados incorretos ou conta inexistente."; els.loginError.classList.remove('hidden'); els.loginBtn.textContent = "Entrar no Sistema"; els.loginBtn.disabled = false; }); });
         
-        // CORREÇÃO: Limpeza e Logoff com Segurança Máxima (Reload do JS e da Memória do Navegador)
         els.logoutBtn.addEventListener('click', () => { 
             if(confirm("Deseja sair do sistema?")) { 
                 signOut(auth).then(() => { 
@@ -886,8 +885,8 @@
                         if (currentTextTop.trim() !== '' || prod.priceRegular.trim() !== '') {
                             priceRegularHTML = `
                                 <div class="editable-element" data-index="${oIdx}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${prRegSize}rem; color: ${s.priceRegularColor}; text-align: center; width: 100%; font-weight: 900; line-height: 0.9; text-transform: uppercase; margin-bottom: 0px;">
-                                    ${currentTextTop.trim() !== '' ? `<div class="sub-edit-label" title="Dê 2 cliques para editar o rótulo (ex: CLIENTE)" style="margin-bottom: 0px; cursor: text;">${currentTextTop}</div>` : ''}
-                                    ${prod.priceRegular.trim() !== '' ? `<div class="sub-edit-price" title="Dê 2 cliques para editar o PREÇO ANTERIOR" style="cursor: text;">R$ ${prod.priceRegular}</div>` : ''}
+                                    ${currentTextTop.trim() !== '' ? `<div style="margin-bottom: 0px;">${currentTextTop}</div>` : ''}
+                                    ${prod.priceRegular.trim() !== '' ? `<div>R$ ${prod.priceRegular}</div>` : ''}
                                     <div class="element-resize-handle no-print"></div>
                                 </div>
                             `;
@@ -898,7 +897,7 @@
                             const logoW = 100 * (s.clubLogoGlobalScale / 100);
                             clubLogoEl = `<img src="${state.clubLogoImg}" style="width: ${logoW}%; height: auto; object-fit: contain;">`;
                         } else if (currentTextBottom.trim() !== '') { 
-                            clubLogoEl = `<div class="sub-edit-prefix" title="Dê 2 cliques para editar o rótulo (ex: CLUBE)" style="font-weight: 900; line-height: 0.9; text-transform: uppercase; cursor: text;">${currentTextBottom}</div>`; 
+                            clubLogoEl = `<div style="font-weight: 900; line-height: 0.9; text-transform: uppercase;">${currentTextBottom}</div>`; 
                         }
 
                         if (clubLogoEl !== '') {
@@ -1070,6 +1069,7 @@
         els.saveProjectBtn.addEventListener('click', saveCurrentProject);
         els.printBtn.addEventListener('click', () => { if(state.products.length === 0) return showToast("Adicione produtos antes de imprimir!", "error"); window.print(); });
 
+        // SOLUÇÃO: Área de clique estendida e cálculo matemático
         document.addEventListener('dblclick', (e) => {
             const editableEl = e.target.closest('.editable-element');
             if (!editableEl) return;
@@ -1083,24 +1083,24 @@
                 if (newText !== null && newText.trim() !== "") { state.products[index].name = newText.toUpperCase(); renderPosters(); }
             } 
             else if (type === 'priceRegular') {
-                if (e.target.closest('.sub-edit-label')) {
+                // Mágica: Se clicar na metade de cima da caixa, edita o "CLIENTE". Metade de baixo, edita o preço.
+                const rect = editableEl.getBoundingClientRect();
+                const clickY = e.clientY - rect.top;
+                
+                if (clickY < (rect.height / 2)) {
                     const currentLabel = state.products[index].customTextTop !== undefined ? state.products[index].customTextTop : (s.promoType === 'club' ? s.textClubNormal : s.textPromoDe);
                     const newLabel = prompt("EDIÇÃO INDEPENDENTE:\nDigite o rótulo superior (ex: CLIENTE) apenas para este cartaz:", currentLabel);
                     if (newLabel !== null) { state.products[index].customTextTop = newLabel.toUpperCase(); renderPosters(); }
-                } else if (e.target.closest('.sub-edit-price')) {
-                    const newText = prompt("EDIÇÃO INDEPENDENTE:\nDigite o PREÇO ANTERIOR apenas para este cartaz (ex: 15,90):", state.products[index].priceRegular);
-                    if (newText !== null) { state.products[index].priceRegular = formatPrice(newText); renderPosters(); } 
                 } else {
                     const newText = prompt("EDIÇÃO INDEPENDENTE:\nDigite o PREÇO ANTERIOR apenas para este cartaz (ex: 15,90):", state.products[index].priceRegular);
                     if (newText !== null) { state.products[index].priceRegular = formatPrice(newText); renderPosters(); } 
                 }
             }
             else if (type === 'prefix') {
-                if (e.target.closest('.sub-edit-prefix')) {
-                    const currentLabelBottom = state.products[index].customTextBottom !== undefined ? state.products[index].customTextBottom : (s.promoType === 'club' ? s.textClubPromo : s.textPromoPor);
-                    const newLabelBottom = prompt("EDIÇÃO INDEPENDENTE:\nDigite o rótulo inferior (ex: CLUBE) apenas para este cartaz:", currentLabelBottom);
-                    if (newLabelBottom !== null) { state.products[index].customTextBottom = newLabelBottom.toUpperCase(); renderPosters(); }
-                }
+                // Clique em qualquer lugar deste bloco abre a edição do CLUBE/POR
+                const currentLabelBottom = state.products[index].customTextBottom !== undefined ? state.products[index].customTextBottom : (s.promoType === 'club' ? s.textClubPromo : s.textPromoPor);
+                const newLabelBottom = prompt("EDIÇÃO INDEPENDENTE:\nDigite o rótulo inferior (ex: CLUBE) apenas para este cartaz:", currentLabelBottom);
+                if (newLabelBottom !== null) { state.products[index].customTextBottom = newLabelBottom.toUpperCase(); renderPosters(); }
             }
             else if (type === 'price') {
                 const newText = prompt("EDIÇÃO INDEPENDENTE:\nDigite o novo PREÇO PRINCIPAL apenas para este cartaz (ex: 10,99):", state.products[index].price);

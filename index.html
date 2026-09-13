@@ -115,6 +115,13 @@
             position: absolute; bottom: -6px; right: -6px; width: 16px; height: 16px; background-color: #10b981; border: 2px solid white; border-radius: 50%; cursor: se-resize; display: none; z-index: 50; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
 
+        /* NOVO: Botão de Inserir Texto Livre */
+        .add-text-btn {
+            position: absolute; top: 10px; right: 10px; background-color: #3b82f6; color: white; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 900; cursor: pointer; z-index: 60; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border: 1px solid #1d4ed8; text-transform: uppercase;
+        }
+        .poster:hover .add-text-btn { display: block; }
+        .add-text-btn:hover { background-color: #2563eb; }
+
         @media print {
             .no-print { display: none !important; }
             .no-print-bg { background: none !important; }
@@ -123,6 +130,7 @@
             .resize-handle { display: none !important; }
             .editable-element { border: none !important; }
             .element-resize-handle { display: none !important; }
+            .add-text-btn { display: none !important; }
 
             /* SOLUÇÃO DE IMPRESSÃO: Liberando a rolagem da tela */
             body, html {
@@ -756,7 +764,7 @@
                         
                         const createProd = (lSize) => ({
                             name: name.toUpperCase(), price, priceRegular: priceReg, forcedLayout: lSize,
-                            nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 }
+                            nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 }, customTexts: []
                         });
 
                         for(let i=0; i<qG; i++) { state.products.push(createProd(1)); importedCount++; }
@@ -780,7 +788,7 @@
 
                             state.products.push({ 
                                 name: String(row[0]).trim().toUpperCase(), price: pMain, priceRegular: pReg, forcedLayout: null,
-                                nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 }
+                                nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 }, customTexts: []
                             });
                             importedCount++;
                         }
@@ -793,6 +801,19 @@
                 e.target.value = ''; 
             }; reader.readAsArrayBuffer(file);
         }
+
+        // NOVO: Função Global para Adicionar Texto Extra
+        window.addCustomText = function(index) {
+            const text = prompt("NOVO TEXTO LIVRE:\nDigite o que deseja escrever nesta placa:");
+            if (text && text.trim() !== '') {
+                if (!state.products[index].customTexts) state.products[index].customTexts = [];
+                state.products[index].customTexts.push({
+                    text: text.toUpperCase(),
+                    transform: { x: 0, y: 0, scale: 1 }
+                });
+                renderPosters();
+            }
+        };
 
         function renderPosters() {
             els.previewContainer.innerHTML = ''; const s = state.settings; const root = document.documentElement;
@@ -843,7 +864,6 @@
 
             els.pageCountDisplay.textContent = `Páginas: ${pages.length}`;
 
-            // Variáveis Globais de Texto (Fallback)
             const globalTextTop = s.promoType === 'club' ? s.textClubNormal : s.textPromoDe;
             const globalTextBottom = s.promoType === 'club' ? s.textClubPromo : s.textPromoPor;
 
@@ -867,6 +887,7 @@
                     if (!prod.priceTransform) prod.priceTransform = { x: 0, y: 0, scale: 1 }; 
                     if (!prod.priceRegularTransform) prod.priceRegularTransform = { x: 0, y: 0, scale: 1 };
                     if (!prod.prefixTransform) prod.prefixTransform = { x: 0, y: 0, scale: 1 };
+                    if (!prod.customTexts) prod.customTexts = [];
                     
                     const nameSize = pBase * prod.nameTransform.scale; 
                     const priceSize = prBase * prod.priceTransform.scale; 
@@ -885,8 +906,8 @@
                         if (currentTextTop.trim() !== '' || prod.priceRegular.trim() !== '') {
                             priceRegularHTML = `
                                 <div class="editable-element" data-index="${oIdx}" data-type="priceRegular" style="transform: translate(${prod.priceRegularTransform.x}px, ${prod.priceRegularTransform.y}px); font-size: ${prRegSize}rem; color: ${s.priceRegularColor}; text-align: center; width: 100%; font-weight: 900; line-height: 0.9; text-transform: uppercase; margin-bottom: 0px;">
-                                    ${currentTextTop.trim() !== '' ? `<div style="margin-bottom: 0px;">${currentTextTop}</div>` : ''}
-                                    ${prod.priceRegular.trim() !== '' ? `<div>R$ ${prod.priceRegular}</div>` : ''}
+                                    ${currentTextTop.trim() !== '' ? `<div class="sub-edit-label" title="Dê 2 cliques para editar o rótulo (ex: CLIENTE)" style="margin-bottom: 0px; cursor: text;">${currentTextTop}</div>` : ''}
+                                    ${prod.priceRegular.trim() !== '' ? `<div class="sub-edit-price" title="Dê 2 cliques para editar o PREÇO ANTERIOR" style="cursor: text;">R$ ${prod.priceRegular}</div>` : ''}
                                     <div class="element-resize-handle no-print"></div>
                                 </div>
                             `;
@@ -897,7 +918,7 @@
                             const logoW = 100 * (s.clubLogoGlobalScale / 100);
                             clubLogoEl = `<img src="${state.clubLogoImg}" style="width: ${logoW}%; height: auto; object-fit: contain;">`;
                         } else if (currentTextBottom.trim() !== '') { 
-                            clubLogoEl = `<div style="font-weight: 900; line-height: 0.9; text-transform: uppercase;">${currentTextBottom}</div>`; 
+                            clubLogoEl = `<div class="sub-edit-prefix" title="Dê 2 cliques para editar o rótulo (ex: CLUBE)" style="font-weight: 900; line-height: 0.9; text-transform: uppercase; cursor: text;">${currentTextBottom}</div>`; 
                         }
 
                         if (clubLogoEl !== '') {
@@ -910,9 +931,26 @@
                         }
                     }
 
-                    pageDiv.innerHTML += `<div class="poster">${logoHTML}${headerHTML}
+                    // Renderiza Textos Livres da Gaveta
+                    let customTextsHTML = '';
+                    prod.customTexts.forEach((ct, ctIdx) => {
+                        customTextsHTML += `
+                        <div class="editable-element" data-index="${oIdx}" data-type="customText" data-ctidx="${ctIdx}" title="Dê 2 cliques para editar ou apagar" style="position: absolute; top: 10%; left: 10%; transform: translate(${ct.transform.x}px, ${ct.transform.y}px); font-size: ${(pBase * 0.3) * ct.transform.scale}rem; color: ${s.priceColor}; font-weight: 900; line-height: 0.9; text-transform: uppercase; white-space: nowrap; z-index: 55;">
+                            ${ct.text}
+                            <div class="element-resize-handle no-print"></div>
+                        </div>`;
+                    });
+
+                    // NOVO: Botão Flutuante Inserir Texto
+                    const addTextBtnHTML = `<button class="add-text-btn no-print" onclick="addCustomText(${oIdx})">+ INSERIR TEXTO</button>`;
+
+                    pageDiv.innerHTML += `<div class="poster">
+                        ${addTextBtnHTML}
+                        ${logoHTML}${headerHTML}
                         <div class="poster-body" style="padding: 2%;">
                             
+                            ${customTextsHTML}
+
                             <div class="product-name editable-element" data-index="${oIdx}" data-type="name" title="Dê 2 cliques para editar o texto" style="transform: translate(${prod.nameTransform.x}px, ${prod.nameTransform.y}px); font-size: ${nameSize}rem; font-weight: 900; line-height: 0.9; text-transform: uppercase;">
                                 ${prod.name}
                                 <div class="element-resize-handle no-print"></div>
@@ -947,7 +985,7 @@
         }
 
         let isDraggingLogo = false, isResizingLogo = false, startMouseX, startMouseY, startLogoX, startLogoY, startLogoW, activePoster = null;
-        let isDraggingElement = false, isResizingElement = false, activeElIndex = -1, activeElType = null, activeDomElement = null, startElX, startElY, startElScale;
+        let isDraggingElement = false, isResizingElement = false, activeElIndex = -1, activeElType = null, activeDomElement = null, startElX, startElY, startElScale, activeCtIndex = -1;
 
         document.addEventListener('mousedown', (e) => {
             const elResizeHandle = e.target.closest('.element-resize-handle'); const editableEl = e.target.closest('.editable-element');
@@ -958,6 +996,9 @@
                 startMouseX = e.clientX; 
                 if (activeElType === 'globalValidity') {
                     startElScale = state.settings.validityTransform.scale;
+                } else if (activeElType === 'customText') {
+                    activeCtIndex = parseInt(editableEl.dataset.ctidx);
+                    startElScale = state.products[activeElIndex].customTexts[activeCtIndex].transform.scale;
                 } else {
                     startElScale = state.products[activeElIndex][activeElType + 'Transform'].scale; 
                 }
@@ -971,6 +1012,10 @@
                 if (activeElType === 'globalValidity') {
                     startElX = state.settings.validityTransform.x;
                     startElY = state.settings.validityTransform.y;
+                } else if (activeElType === 'customText') {
+                    activeCtIndex = parseInt(editableEl.dataset.ctidx);
+                    startElX = state.products[activeElIndex].customTexts[activeCtIndex].transform.x;
+                    startElY = state.products[activeElIndex].customTexts[activeCtIndex].transform.y;
                 } else {
                     startElX = state.products[activeElIndex][activeElType + 'Transform'].x; 
                     startElY = state.products[activeElIndex][activeElType + 'Transform'].y; 
@@ -990,6 +1035,10 @@
                     document.querySelectorAll('.global-validity-el').forEach(el => {
                         el.style.transform = `translate(${newX}px, ${newY}px)`;
                     });
+                } else if (activeElType === 'customText') {
+                    state.products[activeElIndex].customTexts[activeCtIndex].transform.x = newX;
+                    state.products[activeElIndex].customTexts[activeCtIndex].transform.y = newY;
+                    activeDomElement.style.transform = `translate(${newX}px, ${newY}px)`;
                 } else {
                     state.products[activeElIndex][activeElType + 'Transform'].x = newX; state.products[activeElIndex][activeElType + 'Transform'].y = newY;
                     activeDomElement.style.transform = `translate(${newX}px, ${newY}px)`;
@@ -1007,6 +1056,13 @@
                         pBase *= (state.settings.prodFontScale / 100);
                         el.style.fontSize = `${(pBase * 0.3) * newScale}rem`;
                     });
+                } else if (activeElType === 'customText') {
+                    state.products[activeElIndex].customTexts[activeCtIndex].transform.scale = newScale;
+                    const s = state.settings; 
+                    const pageLayout = state.products[activeElIndex].forcedLayout || s.layout;
+                    let pBase = pageLayout === 1 ? 4.0 : (pageLayout === 2 ? 3.0 : 2.0);
+                    pBase *= (s.prodFontScale / 100);
+                    activeDomElement.style.fontSize = `${(pBase * 0.3) * newScale}rem`;
                 } else {
                     state.products[activeElIndex][activeElType + 'Transform'].scale = newScale;
                     const s = state.settings; 
@@ -1036,7 +1092,7 @@
         els.addManualBtn.addEventListener('click', () => {
             const name = els.manualProdName.value.trim(), price = els.manualProdPrice.value.trim(), priceReg = els.manualProdPriceRegular.value.trim();
             if (!name || !price) return showToast("Preencha nome e preço principal.", "error");
-            state.products.push({ name: name.toUpperCase(), price: formatPrice(price), priceRegular: formatPrice(priceReg), forcedLayout: null, nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 } });
+            state.products.push({ name: name.toUpperCase(), price: formatPrice(price), priceRegular: formatPrice(priceReg), forcedLayout: null, nameTransform: { x: 0, y: 0, scale: 1 }, priceTransform: { x: 0, y: 0, scale: 1 }, priceRegularTransform: { x: 0, y: 0, scale: 1 }, prefixTransform: { x: 0, y: 0, scale: 1 }, customTexts: [] });
             els.manualProdName.value = ''; els.manualProdPrice.value = ''; els.manualProdPriceRegular.value = ''; els.manualProdName.focus(); renderPosters(); showToast("Inserido!", "success");
         });
 
@@ -1069,7 +1125,6 @@
         els.saveProjectBtn.addEventListener('click', saveCurrentProject);
         els.printBtn.addEventListener('click', () => { if(state.products.length === 0) return showToast("Adicione produtos antes de imprimir!", "error"); window.print(); });
 
-        // SOLUÇÃO: Área de clique estendida e cálculo matemático
         document.addEventListener('dblclick', (e) => {
             const editableEl = e.target.closest('.editable-element');
             if (!editableEl) return;
@@ -1083,10 +1138,8 @@
                 if (newText !== null && newText.trim() !== "") { state.products[index].name = newText.toUpperCase(); renderPosters(); }
             } 
             else if (type === 'priceRegular') {
-                // Mágica: Se clicar na metade de cima da caixa, edita o "CLIENTE". Metade de baixo, edita o preço.
                 const rect = editableEl.getBoundingClientRect();
                 const clickY = e.clientY - rect.top;
-                
                 if (clickY < (rect.height / 2)) {
                     const currentLabel = state.products[index].customTextTop !== undefined ? state.products[index].customTextTop : (s.promoType === 'club' ? s.textClubNormal : s.textPromoDe);
                     const newLabel = prompt("EDIÇÃO INDEPENDENTE:\nDigite o rótulo superior (ex: CLIENTE) apenas para este cartaz:", currentLabel);
@@ -1097,7 +1150,6 @@
                 }
             }
             else if (type === 'prefix') {
-                // Clique em qualquer lugar deste bloco abre a edição do CLUBE/POR
                 const currentLabelBottom = state.products[index].customTextBottom !== undefined ? state.products[index].customTextBottom : (s.promoType === 'club' ? s.textClubPromo : s.textPromoPor);
                 const newLabelBottom = prompt("EDIÇÃO INDEPENDENTE:\nDigite o rótulo inferior (ex: CLUBE) apenas para este cartaz:", currentLabelBottom);
                 if (newLabelBottom !== null) { state.products[index].customTextBottom = newLabelBottom.toUpperCase(); renderPosters(); }
@@ -1112,6 +1164,19 @@
                     state.settings.validityText = newText.toUpperCase(); 
                     els.validityText.value = state.settings.validityText;
                     renderPosters(); 
+                }
+            }
+            else if (type === 'customText') {
+                const ctIdx = parseInt(editableEl.dataset.ctidx);
+                const currentText = state.products[index].customTexts[ctIdx].text;
+                const newText = prompt("EDIÇÃO DE TEXTO LIVRE:\nDigite o novo texto. Para apagar, deixe vazio e dê OK:", currentText);
+                if (newText !== null) {
+                    if (newText.trim() === "") {
+                        state.products[index].customTexts.splice(ctIdx, 1);
+                    } else {
+                        state.products[index].customTexts[ctIdx].text = newText.toUpperCase();
+                    }
+                    renderPosters();
                 }
             }
             

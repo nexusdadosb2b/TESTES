@@ -9,8 +9,8 @@
     <!-- SheetJS para ler arquivos Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    <!-- Fontes do Google Atualizadas e Inseridas -->
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Caveat:wght@700&family=Chewy&family=Fira+Sans+Extra+Condensed:wght@700;900&family=Inter:wght@400;700;900&family=Oswald:wght@400;700&family=Permanent+Marker&family=Roboto:wght@400;700;900&family=Impact&display=swap" rel="stylesheet">
+    <!-- Fontes do Google Atualizadas e Inseridas (Correção: 'Impact' removida do link da API para evitar bloqueio 400 do Google) -->
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Caveat:wght@700&family=Chewy&family=Fira+Sans+Extra+Condensed:wght@700;900&family=Inter:wght@400;700;900&family=Oswald:wght@400;700&family=Permanent+Marker&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -802,7 +802,6 @@
             }; reader.readAsArrayBuffer(file);
         }
 
-        // NOVO: Função Global para Adicionar Texto Extra
         window.addCustomText = function(index) {
             const text = prompt("NOVO TEXTO LIVRE:\nDigite o que deseja escrever nesta placa:");
             if (text && text.trim() !== '') {
@@ -931,7 +930,6 @@
                         }
                     }
 
-                    // Renderiza Textos Livres da Gaveta
                     let customTextsHTML = '';
                     prod.customTexts.forEach((ct, ctIdx) => {
                         customTextsHTML += `
@@ -941,7 +939,6 @@
                         </div>`;
                     });
 
-                    // NOVO: Botão Flutuante Inserir Texto
                     const addTextBtnHTML = `<button class="add-text-btn no-print" onclick="addCustomText(${oIdx})">+ INSERIR TEXTO</button>`;
 
                     pageDiv.innerHTML += `<div class="poster">

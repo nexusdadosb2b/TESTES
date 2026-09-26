@@ -9,7 +9,7 @@
     <!-- SheetJS para ler arquivos Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    <!-- Fontes do Google Atualizadas e Inseridas (Correção: 'Impact' removida do link da API para evitar bloqueio 400 do Google) -->
+    <!-- Fontes do Google Atualizadas e Inseridas -->
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Caveat:wght@700&family=Chewy&family=Fira+Sans+Extra+Condensed:wght@700;900&family=Inter:wght@400;700;900&family=Oswald:wght@400;700&family=Permanent+Marker&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
@@ -115,7 +115,6 @@
             position: absolute; bottom: -6px; right: -6px; width: 16px; height: 16px; background-color: #10b981; border: 2px solid white; border-radius: 50%; cursor: se-resize; display: none; z-index: 50; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
 
-        /* NOVO: Botão de Inserir Texto Livre */
         .add-text-btn {
             position: absolute; top: 10px; right: 10px; background-color: #3b82f6; color: white; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 900; cursor: pointer; z-index: 60; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border: 1px solid #1d4ed8; text-transform: uppercase;
         }
@@ -170,7 +169,6 @@
             #toastContainer { display: none !important; }
         }
     </style>
-    <!-- Estilo Dinâmico para resolver a mistura de orientações em Impressões Múltiplas -->
     <style id="dynamicPrintStyle">
         @page { margin: 0; }
         @page portrait_page { size: A4 portrait; margin: 0; }
@@ -358,7 +356,6 @@
                     <div><label class="block text-xs font-bold text-gray-700 mb-1 flex justify-between">Tamanho Preço <span id="priceFontSizeDisplay" class="text-blue-600">100%</span></label><input type="range" id="priceFontSizeScale" min="50" max="250" value="100" class="w-full h-2 bg-gray-300 rounded-lg appearance-none"></div>
                 </div>
 
-                <!-- MENU COMPLETO PARA CLUBE DE VANTAGENS / DE POR -->
                 <div id="promoSettings" class="hidden mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-md">
                     <label class="block text-xs font-bold text-indigo-800 mb-2 border-b border-indigo-200 pb-1">Ajustes Preço Anterior / Clube</label>
                     
@@ -373,13 +370,11 @@
                         </div>
                     </div>
 
-                    <!-- Campos de Texto do Clube -->
                     <div id="clubTextControl" class="hidden grid grid-cols-2 gap-2 mt-2">
                         <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 1 (Clube)</label><input type="text" id="textClubNormal" value="CLIENTE" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
                         <div><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 2 (Clube)</label><input type="text" id="textClubPromo" value="CLUBE" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
                     </div>
 
-                    <!-- Campos de Texto De/Por -->
                     <div class="grid grid-cols-2 gap-2 mt-2" id="dePorTextControl">
                         <div id="textPromo1"><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 1 (Normal)</label><input type="text" id="textPromoDe" value="PREÇO NORMAL R$" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
                         <div id="textPromo2"><label class="block text-[10px] font-bold text-gray-600 mb-1">Texto 2 (Promo)</label><input type="text" id="textPromoPor" value="POR" class="w-full text-xs border-gray-300 rounded border p-1 outline-none uppercase font-bold"></div>
@@ -391,7 +386,6 @@
                     </div>
                 </div>
 
-                <!-- NOVO CAMPO: Data de Validade -->
                 <div class="mt-4 bg-gray-50 p-3 rounded-md border border-gray-200 shadow-sm">
                     <label class="block text-sm font-bold text-gray-700 mb-1">Data de Validade (Global)</label>
                     <input type="text" id="validityText" placeholder="Ex: OFERTAS VÁLIDAS ATÉ 31/12" class="w-full text-sm border-gray-300 rounded border p-2 outline-none uppercase font-bold focus:ring-blue-500 shadow-inner">
@@ -460,6 +454,17 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // NOVO: Gerador Universal de ID (Impede que o Firebase trave em ambientes locais ou sem HTTPS)
+        function generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                try { return crypto.randomUUID(); } catch(e) {}
+            }
+            return 'xxxx-xxxx-4xxx-yxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
 
         const firebaseConfig = {
             apiKey: "AIzaSyDB81varVquhypzkLfbf6bf2RiNX4fcPL4",
@@ -532,7 +537,7 @@
                 if (user) {
                     currentUser = user; els.loginOverlay.classList.add('hidden'); els.logoutBtn.classList.remove('hidden');
                     els.cloudStatus.textContent = 'Nuvem Conectada'; els.cloudStatus.className = 'text-[10px] font-bold bg-green-100 text-green-800 px-2 py-1 rounded-full border border-green-200';
-                    currentSessionId = crypto.randomUUID(); const sessionRef = doc(db, 'sessions', user.uid);
+                    currentSessionId = generateUUID(); const sessionRef = doc(db, 'sessions', user.uid);
                     await setDoc(sessionRef, { sessionId: currentSessionId, lastLogin: serverTimestamp() });
                     if (sessionUnsubscribe) sessionUnsubscribe();
                     sessionUnsubscribe = onSnapshot(sessionRef, (docSnap) => { if (docSnap.exists() && docSnap.data().sessionId !== currentSessionId) { signOut(auth).then(() => { window.location.reload(); }); } });
@@ -569,21 +574,46 @@
                     li.innerHTML = `<span class="font-bold text-gray-700 truncate w-1/2">${data.name}</span>`;
                     const actionsDiv = document.createElement('div'); actionsDiv.className = 'flex gap-2';
                     const loadBtn = document.createElement('button'); loadBtn.textContent = 'Abrir'; loadBtn.className = 'text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded font-bold border border-blue-200'; loadBtn.onclick = () => loadProjectData(docSnap.id, data);
+                    
+                    // Botão de deletar blindado
                     const delBtn = document.createElement('button'); delBtn.innerHTML = `✕`; delBtn.className = 'text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold border border-red-200'; delBtn.onclick = () => deleteProject(docSnap.id);
+                    
                     actionsDiv.append(loadBtn, delBtn); li.appendChild(actionsDiv); els.savedProjectsList.appendChild(li);
                 });
             });
         }
 
+        // CORREÇÃO: Função blindada com try/catch e UUID seguro
         async function saveCurrentProject() {
             if (!currentUser) return showToast("Faça login para salvar.", "error");
             const name = els.projectName.value.trim(); if (!name) return showToast("Dê um nome para sua campanha.", "error");
             els.saveProjectBtn.disabled = true; els.saveProjectBtn.textContent = 'Salvando...';
             try {
-                let projectId = currentProjectId; if (currentProjectId && name !== loadedProjectName) projectId = crypto.randomUUID(); else if (!currentProjectId) projectId = crypto.randomUUID();
+                let projectId = currentProjectId; 
+                if (currentProjectId && name !== loadedProjectName) projectId = generateUUID(); 
+                else if (!currentProjectId) projectId = generateUUID();
+                
                 await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', projectId), { name, headerImg: state.headerImg, footerImg: state.footerImg, logoImg: state.logoImg, clubLogoImg: state.clubLogoImg, products: state.products, settings: state.settings, updatedAt: serverTimestamp() });
                 currentProjectId = projectId; loadedProjectName = name; showToast("Campanha salva com sucesso!", "success");
-            } catch (error) { showToast("Erro ao salvar.", "error"); } finally { els.saveProjectBtn.disabled = false; els.saveProjectBtn.textContent = 'Salvar'; }
+            } catch (error) { 
+                console.error("Erro ao salvar no Firebase:", error);
+                showToast("Erro ao salvar: " + error.message, "error"); 
+            } finally { els.saveProjectBtn.disabled = false; els.saveProjectBtn.textContent = 'Salvar'; }
+        }
+
+        // CORREÇÃO: Função blindada com try/catch para mostrar o erro real do Firebase
+        async function deleteProject(id) {
+            if (!currentUser) return;
+            if(confirm("Excluir permanentemente?")) { 
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', id)); 
+                    if (currentProjectId === id) { currentProjectId = null; loadedProjectName = ""; els.projectName.value = ''; } 
+                    showToast("Excluída com sucesso.", "success"); 
+                } catch (error) {
+                    console.error("Erro ao excluir do Firebase:", error);
+                    showToast("Erro ao excluir: " + error.message, "error");
+                }
+            }
         }
 
         function loadProjectData(id, data) {
@@ -621,11 +651,6 @@
                 else { b.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-700', 'border-2'); b.classList.add('border-gray-300', 'bg-white', 'text-gray-600', 'border'); }
             });
             renderPosters(); showToast("Campanha carregada!", "success");
-        }
-
-        async function deleteProject(id) {
-            if (!currentUser) return;
-            if(confirm("Excluir permanentemente?")) { await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'campaigns', id)); if (currentProjectId === id) { currentProjectId = null; loadedProjectName = ""; els.projectName.value = ''; } showToast("Excluída.", "info"); }
         }
 
         let newProjectConfirmTimeout, clearProductsConfirmTimeout;
@@ -968,7 +993,7 @@
                             </div>
 
                             ${s.validityText && s.validityText.trim() !== '' ? `
-                            <div class="editable-element global-validity-el" data-type="globalValidity" data-layout="${pageLayout}" title="Dê 2 cliques para editar o texto" style="transform: translate(${s.validityTransform.x}px, ${s.validityTransform.y}px); font-size: ${(pBase * 0.3) * s.validityTransform.scale}rem; color: ${s.prodColor}; width: 100%; text-align: center; margin-top: 15px; font-weight: 900; line-height: 0.9; text-transform: uppercase;">
+                            <div class="editable-element global-validity-el" data-type="globalValidity" data-layout="${pageLayout}" title="Dê 2 cliques para editar o texto" style="transform: translate(${s.validityTransform.x}px,${s.validityTransform.y}px); font-size: ${(pBase * 0.3) * s.validityTransform.scale}rem; color:${s.prodColor}; width: 100%; text-align: center; margin-top: 15px; font-weight: 900; line-height: 0.9; text-transform: uppercase;">
                                 ${s.validityText}
                                 <div class="element-resize-handle no-print"></div>
                             </div>
